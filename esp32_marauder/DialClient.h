@@ -11,12 +11,6 @@
 #include <ArduinoJson.h>
 #include <vector>
 
-struct HTTPResponse_C {
-    int statusCode;
-    String headers;
-    String body;
-};
-
 struct MACAddress {
     uint8_t bytes[6];
 };
@@ -29,7 +23,23 @@ struct MagicPacket {
 const int retryCount = 5;
 const int delayBetweenRetries = 1000; // milliseconds
 
+class RID {
+private:
+    uint32_t number;
+    
+public:
+    RID() {
+        reset();
+    }
 
+    void reset() {
+        number = random(10000, 99999);
+    }
+
+    uint32_t next() {
+        return ++number;
+    }
+};
 
 
 class WakeOnLan {
@@ -93,16 +103,8 @@ public:
     WiFiClientSecure secureClient;
     WiFiUDP multicastClient;
     WakeOnLan wol;
+    RID rid;
 public:
-
-    struct AppInfo {
-        String name;
-        String state;
-        bool allowStop;
-        String rel;
-        String href;
-        String additionalData;
-    };
 
     struct Device {
         String uniqueServiceName;
@@ -110,10 +112,13 @@ public:
         String applicationUrl;
         String friendlyName;
         String wakeup;
-        AppInfo appinfo;
         String screenID;
         String YoutubeToken;
     };
+
+    uint32_t getNextRID() {
+        return rid.next();
+    }
 
     DIALClient(String& ssid, String& password, String& YTUrl);
     ~DIALClient();
@@ -133,8 +138,5 @@ public:
     bool fetchScreenIdWithRetries(const String& applicationUrl, Device& device);
     String getYouTubeToken(const String& screenId);
 };
-
-
-DIALClient::AppInfo currentAppInfo;
 
 #endif
