@@ -4,18 +4,18 @@ DIALClient::DIALClient(String& ssid, String& password, String& YTUrl) : ssid(ssi
 
 
 String extractMAC(const String& str) {
-    int startIndex = str.indexOf("MAC=") + 4;  // Find the start of the MAC address
-    int endIndex = str.indexOf(";", startIndex);  // Find the end of the MAC address
+    int startIndex = str.indexOf("MAC=") + 4;
+    int endIndex = str.indexOf(";", startIndex);
 
     if (startIndex >= 4 && endIndex != -1) {
         return str.substring(startIndex, endIndex);
     } else {
-        return "";  // Return empty string if the format doesn't match
+        return "";
     }
 }
 
-const int MAX_RETRIES = 7;  // Adjust as needed
-const int RETRY_DELAY = 2000;  // Delay in milliseconds, adjust as needed
+const int MAX_RETRIES = 7;
+const int RETRY_DELAY = 2000;
 
 bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& device) {
     for (int i = 0; i < MAX_RETRIES; i++) {
@@ -27,11 +27,11 @@ bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& 
            deserializeJson(doc, Token);
            String actualtoken = doc["loungeToken"].as<String>();
 
-           device.YoutubeToken = actualtoken;  // Store the parsed token
-          return true;  // Exit the function if screenID is found
+           device.YoutubeToken = actualtoken;
+          return true;
         } else {
             Serial.println("Screen ID is Empty. Retrying...");
-            delay(RETRY_DELAY);  // Wait for the defined delay before retrying
+            delay(RETRY_DELAY);
         }
     }
     
@@ -43,9 +43,9 @@ String DIALClient::extractApplicationURL(HttpClient& httpc) {
     String appUrl;
     char headerChar;
     String currentLine = "";
-    int consecutiveNewlines = 0;  // Track consecutive newline characters
-    int maxHeadersRead = 1000;    // Arbitrary limit to prevent infinite loop
-    int readCount = 0;            // Counter to track the number of headers read
+    int consecutiveNewlines = 0; 
+    int maxHeadersRead = 1000;
+    int readCount = 0;
 
     while (httpc.connected() && readCount < maxHeadersRead) {
         headerChar = httpc.readHeader();
@@ -58,34 +58,34 @@ String DIALClient::extractApplicationURL(HttpClient& httpc) {
                 appUrl = currentLine.substring(currentLine.indexOf(':') + 2); // +2 to skip over the colon and potential space
                 break;
             }
-            currentLine = "";  // Reset the current line
+            currentLine = "";
 
             if (consecutiveNewlines >= 2) {
-                // We've hit the end of the headers, break out of loop to avoid reading body
+               
                 break;
             }
         } else if (headerChar != '\r') {
-            consecutiveNewlines = 0;  // Reset if we get any character other than '\n'
+            consecutiveNewlines = 0;  
             currentLine += headerChar;
         }
         readCount++;
     }
-    return appUrl;  // Added trim() to remove any potential leading/trailing whitespace
+    return appUrl;
 }
 
 String extractPathFromURL(const String& url) {
     int doubleSlashPos = url.indexOf("//");
     
-    // If the URL doesn't have "http://", we start from the beginning
+   
     if (doubleSlashPos == -1) {
         doubleSlashPos = 0;
     } else {
-        doubleSlashPos += 2; // Move after the "//"
+        doubleSlashPos += 2;
     }
 
     int slashAfterHost = url.indexOf('/', doubleSlashPos);
 
-    // If there isn't a slash after the host, the URL doesn't have a path
+    
     if (slashAfterHost == -1) {
         return "/";
     }
@@ -94,13 +94,13 @@ String extractPathFromURL(const String& url) {
 }
 
 int extractTimeout(const String& str) {
-    int startIndex = str.indexOf("Timeout=") + 8;  // Find the start of the Timeout value
-    int endIndex = str.indexOf(";", startIndex);  // Find the end of the Timeout value
+    int startIndex = str.indexOf("Timeout=") + 8;
+    int endIndex = str.indexOf(";", startIndex);  
 
     if (startIndex >= 8 && endIndex != -1) {
         return str.substring(startIndex, endIndex).toInt();
     } else {
-        return -1;  // Return -1 if the format doesn't match or if there's an error
+        return -1;
     }
 }
 
@@ -110,7 +110,7 @@ bool DIALClient::convertMacStringToBytes(const String& macString, uint8_t* macBy
 
 
     if (NewMac.length() != 17) {
-        return false; // Invalid MAC address format
+        return false;
     }
 
     for (int i = 0; i < 6; i++) {
@@ -145,12 +145,12 @@ bool DIALClient::parseSSDPResponse(const String& response, Device& device) {
         return false;
     }
 
-    // Initialization
+    
     device.location = "";
     device.uniqueServiceName = "";
     device.wakeup = "";
 
-    // Split the response into lines and parse key headers
+    
     int idx = 0;
     while (idx < response.length()) {
         int nextIdx = response.indexOf('\n', idx);
@@ -161,7 +161,7 @@ bool DIALClient::parseSSDPResponse(const String& response, Device& device) {
         String line = response.substring(idx, nextIdx);
         idx = nextIdx + 1;
 
-        line.trim(); // Remove any leading/trailing whitespace
+        line.trim();
 
         if (line.startsWith("LOCATION:")) {
             device.location = line.substring(9);
@@ -204,40 +204,40 @@ std::vector<DIALClient::Device> DIALClient::discoverDevices() {
 
           multicastClient.beginMulticast(IPAddress(239,255,255,250), 1900);
           
-          // Send M-SEARCH multiple times
+          
           for (int i = 0; i < 5; i++) {
               multicastClient.beginPacket(IPAddress(239,255,255,250), 1900);
               multicastClient.write((const uint8_t *)mSearchRequest, sizeof(mSearchRequest));
               multicastClient.endPacket();
-              delay(2000); // wait for a second between each
+              delay(2000); 
           }
 
           multicastClient.write(mSearchRequest, sizeof(mSearchRequest));
 
         unsigned long startTime = millis();
         while (millis() - startTime < 5000) {
-            if (multicastClient.parsePacket()) {  // Check if a packet is available
-                int len = multicastClient.available();  // Get the length of the packet
-                char buffer[len + 1];  // Create a buffer to read the packet
-                multicastClient.read(buffer, len);  // Read the packet into the buffer
-                buffer[len] = '\0';  // Null-terminate the string
+            if (multicastClient.parsePacket()) {
+                int len = multicastClient.available(); 
+                char buffer[len + 1];  
+                multicastClient.read(buffer, len);  
+                buffer[len] = '\0';  
 
                 String response = String(buffer);
 
                 Device device;
                 if (parseSSDPResponse(response, device)) {
                   if (discoveredUSNs.find(device.uniqueServiceName) == discoveredUSNs.end()) {
-                    // Not discovered yet, so add to devices list and to the USN set
+                    
                     devices.push_back(device);
                     discoveredUSNs.insert(device.uniqueServiceName);
-                  }  // Else, it's a duplicate and we skip it
+                  }
                 }
             }
         }
         retries++;
     }
 
-    // If no devices are found after all retries, log an error message
+
     if (devices.empty()) {
         Serial.println("[discoverDevices] No devices found after all retries.");
     }
@@ -246,7 +246,7 @@ std::vector<DIALClient::Device> DIALClient::discoverDevices() {
 }
 
 void DIALClient::exploreNetwork() {
-    const int maxRetries = 3;  // Define a maximum number of retries for device discovery
+    const int maxRetries = 3;
     bool videoPlayedSuccessfully = false;
 
     for (int attempt = 0; attempt < maxRetries && !videoPlayedSuccessfully; ++attempt) {
@@ -254,7 +254,7 @@ void DIALClient::exploreNetwork() {
 
         if (devices.empty()) {
             Serial.println("No devices discovered. Retrying...");
-            continue;  // Jump to the next iteration to try discovering devices again
+            continue;
         }
 
         for (Device& device : devices) {
@@ -277,12 +277,12 @@ void DIALClient::exploreNetwork() {
                     unsigned long startTime = millis();
                     bool isYouTubeRunning = false;
 
-                    while (millis() - startTime < 5000) {  // 10 seconds timeout
+                    while (millis() - startTime < 5000) {
                         if (checkYouTubeAppStatus(device.applicationUrl, device) == 200) {
                             isYouTubeRunning = true;
                             break;
                         }
-                        delay(500);  // Poll every half-second to reduce the number of requests
+                        delay(500);
                     }
 
                     if (isYouTubeRunning) {
@@ -310,20 +310,20 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
     httpc.beginRequest();
     httpc.post(endpoint);
 
-    // Constructing the JSON data
+    
     String jsonData = "{\"command\": \"" + command + "\", \"params\": {\"videoId\": \"" + videoId + "\"}, \"loungeToken\": \"" + loungeToken + "\"}";
 
-    // Setting headers
+    
     httpc.sendHeader("User-Agent", "ESP32");
     httpc.sendHeader("Content-Type", "application/json");
     httpc.sendHeader("Content-Length", jsonData.length());
     
-    // Send POST data
+  
     httpc.beginBody();
     httpc.print(jsonData);
     httpc.endRequest();
 
-    // Get the response code
+  
     int responseCode = httpc.responseStatusCode();
     String responseBody = httpc.responseBody();
 
@@ -336,34 +336,34 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
 }
 
 String DIALClient::getYouTubeToken(const String& screenId) {
-    const char* serverAddress = "144.48.106.204";  // Replace with your Python server's IP
-    const int port = 5000;  // Or whatever port you have the Python server listening on
+    const char* serverAddress = "144.48.106.204";
+    const int port = 5000;
     const char* endpoint = "/getYouTubeToken";
 
     HttpClient httpc(client, serverAddress, port); 
     httpc.beginRequest();
     httpc.post(endpoint);
 
-    // Setting headers
+   
     httpc.sendHeader("User-Agent", "ESP32");
     String jsonData = "{\"screenId\": \"" + screenId + "\"}";
     httpc.sendHeader("Content-Type", "application/json");
     httpc.sendHeader("Content-Length", jsonData.length());
 
-    // Send POST data
+    
     httpc.beginBody();
     httpc.print(jsonData);
     httpc.endRequest();
 
-    // Get the response code
+    
     int responseCode = httpc.responseStatusCode();
 
-    // Read the response body
+    
     String responseBody = httpc.responseBody();
 
     if (responseCode == 200) {
         Serial.println("Received token: " + responseBody);
-        return responseBody;  // Assuming the Python server returns the token as the entire response body
+        return responseBody;
     } else {
         Serial.println("Failed to retrieve token. HTTP Response Code: " + String(responseCode));
         Serial.println(responseBody);
@@ -382,7 +382,7 @@ String DIALClient::extractScreenId(const String& xmlData) {
     }
     startIndex += startTag.length();
 
-    int endIndex = xmlData.indexOf(endTag, startIndex); // Start searching from startIndex
+    int endIndex = xmlData.indexOf(endTag, startIndex);
     if (endIndex == -1) {
         Serial.println("End tag not found.");
         return "";
@@ -408,7 +408,7 @@ void DIALClient::extractIPAndPort(const String& appUrl, IPAddress& ip, uint16_t&
         Serial.println("Parsed port: " + String(port));
     }
 
-    String ipStr = appUrl.substring(7, portStartIndex);  // assuming "http://"
+    String ipStr = appUrl.substring(7, portStartIndex);
     Serial.println("Parsed IP string: " + ipStr);
     if (!ip.fromString(ipStr)) {
         Serial.println("Failed to parse IP");
@@ -418,35 +418,40 @@ void DIALClient::extractIPAndPort(const String& appUrl, IPAddress& ip, uint16_t&
 }
 
 void DIALClient::launchYouTubeApp(const String& appUrl) {
-    // Extract the path from the appUrl
-    int startPos = appUrl.indexOf('/', 7);  // Start searching after "http://"
+    int startPos = appUrl.indexOf('/', 7);
     String basePath = (startPos != -1) ? appUrl.substring(startPos) : "/";
 
-    // Append "YouTube" to the extracted path
     String youtubePath = basePath + "/YouTube";
 
     IPAddress extractedIp;
     uint16_t extractedPort;
     extractIPAndPort(appUrl, extractedIp, extractedPort);
 
-    // Create HTTP client with the extracted server and port
     HttpClient httpc(client, extractedIp, extractedPort);
 
-    // Set headers, if necessary
     httpc.beginRequest();
 
-    // Send POST request to launch the app
     int httpCode = httpc.post(youtubePath);
     httpc.sendHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
     httpc.sendHeader("Origin", "https://www.youtube.com");
     httpc.endRequest();
 
-    // Check the response
     if (httpCode == 201) {
         Serial.println("Successfully launched the YouTube app.");
     } else {
         Serial.println("Failed to launch the YouTube app. HTTP Response Code: " + String(httpCode));
     }
+}
+
+DIALClient::~DIALClient() {
+
+    client.stop();
+
+
+    secureClient.stop();
+
+
+    multicastClient.stop();
 }
 
 int DIALClient::checkYouTubeAppStatus(const String& appUrl, Device& device_I) {
@@ -479,9 +484,9 @@ int DIALClient::checkYouTubeAppStatus(const String& appUrl, Device& device_I) {
 
             String responseBody = httpc.responseBody();
 
-            // Parse the XML here (you might need an XML parsing library for this)
+           
 
-            // As a basic check, without a proper XML parser:
+           
             if (responseBody.indexOf("<state>running</state>") != -1) {
                 device_I.screenID = extractScreenId(responseBody);
                 Serial.println("YouTube app is running.");
@@ -509,7 +514,6 @@ int DIALClient::checkYouTubeAppStatus(const String& appUrl, Device& device_I) {
 }
 
 String DIALClient::getDialApplicationUrl(const String& locationUrl) {
-    // Parse the IP and port from the locationUrl
     int ip_start = locationUrl.indexOf("//") + 2;
     int ip_end = locationUrl.indexOf(":", ip_start);
     int port_end = locationUrl.indexOf("/", ip_end);
