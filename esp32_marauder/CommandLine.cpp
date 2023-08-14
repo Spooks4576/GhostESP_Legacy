@@ -1,4 +1,5 @@
 #include "CommandLine.h"
+#include "DIALClient.h"
 
 CommandLine::CommandLine() {
 }
@@ -241,6 +242,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
     Serial.println(HELP_JOIN_WIFI_CMD);
+    Serial.println(HELP_YOUTUBECONNECT_CMD);
     
     // Bluetooth sniff/scan
     Serial.println(HELP_BT_SNIFF_CMD);
@@ -999,7 +1001,7 @@ void CommandLine::runCommand(String input) {
     int n_sw = this->argSearch(&cmd_args, "-n"); // name
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
-    int p_sw = this->argSearch(&cmd_args, "-p");   
+    int p_sw = this->argSearch(&cmd_args, "-p"); 
     
     String essid = "";
     String pwx = "";
@@ -1030,5 +1032,59 @@ void CommandLine::runCommand(String input) {
     }
     Serial.println("Attempting to join WiFi with ssid " + (String)essid);
     wifi_scan_obj.joinWiFi(essid, pwx);
+  }
+  else if (cmd_args.get(0) == YOUTUBECONNECT_CMD) {
+    int n_sw = this->argSearch(&cmd_args, "-n"); // name
+    int a_sw = this->argSearch(&cmd_args, "-a"); // access point
+    int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
+    int p_sw = this->argSearch(&cmd_args, "-p");
+    int u_sw = this->argSearch(&cmd_args, "-u");     
+    
+    String essid = "";
+    String pwx = "";
+    String ytURL = "";
+
+    if (u_sw != -1) {
+      ytURL = cmd_args.get(u_sw + 1);
+    }
+    
+    if (s_sw != -1) {
+      int index = cmd_args.get(s_sw + 1).toInt();
+      if (!this->inRange(ssids->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = ssids->get(index).essid;
+    } else if (a_sw != -1) {
+      int index = cmd_args.get(a_sw + 1).toInt();
+      if (!this->inRange(access_points->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = access_points->get(index).essid;
+    } else if (n_sw != -1) {
+      essid = cmd_args.get(n_sw + 1);
+    } else {
+      Serial.println("You must specify an access point or ssid");
+      return;
+    }
+    
+    if (p_sw != -1) {
+      pwx = cmd_args.get(p_sw + 1);
+    }
+    Serial.println("Attempting to join WiFi with ssid " + (String)essid);
+   
+    if (ytURL.isEmpty())
+    {
+       Serial.println("Youtube URL is Empty.");
+       return;
+    }
+
+    DIALClient* client = new DIALClient(essid, pwx, ytURL);
+
+    if (client)
+    {
+      client->Execute();
+    }
   }
 }

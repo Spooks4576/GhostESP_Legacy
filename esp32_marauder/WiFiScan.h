@@ -16,6 +16,7 @@
 
 #include <WiFi.h>
 #include "EvilPortal.h"
+#include <vector>
 #include <math.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -134,6 +135,12 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 struct Station {
   uint8_t mac[6];
   bool selected;
+};
+
+struct NetworkInfo {
+  String SSID;
+  int32_t RSSI;
+  int8_t channel;
 };
 
 class WiFiScan
