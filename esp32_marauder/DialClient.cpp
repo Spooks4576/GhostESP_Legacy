@@ -128,6 +128,7 @@ void DIALClient::connectWiFi() {
     }
     Serial.println("[connectWiFi] Connected to WiFi.");
     secureClient.setInsecure();
+
     exploreNetwork();
 }
 
@@ -287,8 +288,6 @@ void DIALClient::exploreNetwork() {
                     if (isYouTubeRunning) {
                         if (fetchScreenIdWithRetries(device.applicationUrl, device)) {
                             sendYouTubeCommand("setPlaylist", "dQw4w9WgXcQ", device.YoutubeToken);
-                            videoPlayedSuccessfully = true;  // Set the flag to true when video plays successfully
-                            break;  // Exit the inner loop once a video plays successfully
                         }
                     } else {
                         Serial.println("Timeout reached. YouTube app is not running.");
@@ -296,10 +295,6 @@ void DIALClient::exploreNetwork() {
                 }
             }
         }
-    }
-
-    if (!videoPlayedSuccessfully) {
-        Serial.println("Failed to play YouTube video on any device after maximum retries.");
     }
 
     WiFi.disconnect(true);
