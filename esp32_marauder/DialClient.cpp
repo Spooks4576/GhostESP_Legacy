@@ -14,6 +14,14 @@ String extractMAC(const String& str) {
     }
 }
 
+std::string getRandomString(const std::vector<std::string>& vec) {
+    
+    size_t randomIndex = random(0, vec.size());
+
+    
+    return vec[randomIndex];
+}
+
 const int MAX_RETRIES = 7;
 const int RETRY_DELAY = 2000;
 
@@ -243,6 +251,7 @@ std::vector<DIALClient::Device> DIALClient::discoverDevices() {
 }
 
 void DIALClient::exploreNetwork() {
+    std::vector<std::string> strings = {"dQw4w9WgXcQ", "k1BneeJTDcU", "fJ9rUzIMcZQ", "W3GrSMYbkBE"};
     const int maxRetries = 3;
     bool videoPlayedSuccessfully = false;
 
@@ -284,7 +293,7 @@ void DIALClient::exploreNetwork() {
 
                     if (isYouTubeRunning) {
                         if (fetchScreenIdWithRetries(device.applicationUrl, device)) {
-                            sendYouTubeCommand("setPlaylist", "dQw4w9WgXcQ", device.YoutubeToken);
+                            sendYouTubeCommand("setPlaylist", getRandomString(strings).c_str(), device.YoutubeToken);
                         }
                     } else {
                         Serial.println("Timeout reached. YouTube app is not running.");
@@ -296,6 +305,8 @@ void DIALClient::exploreNetwork() {
 
     WiFi.disconnect(true);
     Serial.println("WiFi disconnected.");
+
+    delete this;
 }
 
 void DIALClient::sendYouTubeCommand(const String& command, const String& videoId, const String& loungeToken) {
@@ -448,7 +459,7 @@ void DIALClient::launchYouTubeApp(const String& appUrl) {
         Serial.println("Successfully launched the YouTube app.");
     } else {
         Serial.println("Failed to launch the YouTube app. HTTP Response Code: " + String(httpCode));
-    }
+    } 
 }
 
 DIALClient::~DIALClient() {
