@@ -492,6 +492,7 @@ void DIALClient::launchNetflixApp(const String& appUrl) {
         Serial.println("Successfully launched the Netflix app.");
     } else {
         Serial.println("Failed to launch the Netflix app. HTTP Response Code: " + String(httpCode));
+  }
 }
 
 DIALClient::~DIALClient() {
