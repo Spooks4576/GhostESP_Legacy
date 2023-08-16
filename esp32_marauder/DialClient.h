@@ -98,7 +98,7 @@ class DIALClient {
 public:
     String ssid;
     String password;
-    String yturl;
+    String App;
     WiFiClient client;
     WiFiClientSecure secureClient;
     WiFiUDP multicastClient;
@@ -120,7 +120,7 @@ public:
         return rid.next();
     }
 
-    DIALClient(String& ssid, String& password, String& YTUrl);
+    DIALClient(String& ssid, String& password, String& App);
     ~DIALClient();
     void connectWiFi();
     void Execute();
@@ -130,13 +130,19 @@ public:
     bool parseSSDPResponse(const String& response, Device& device);
     bool convertMacStringToBytes(const String& macString, uint8_t* macBytes);
     String extractApplicationURL(HttpClient &httpc);
-    int checkYouTubeAppStatus(const String& appUrl, Device& device);
     void extractIPAndPort(const String& appUrl, IPAddress& ip, uint16_t& port);
-    void launchYouTubeApp(const String& appUrl);
+
+    
+    // Netflix
+    void launchNetflixApp(const String& appUrl);
+
+    // Youtube
+    int checkYouTubeAppStatus(const String& appUrl, Device& device);
+    String getYouTubeToken(const String& screenId);
     void sendYouTubeCommand(const String& command, const String& videoId, const String& loungeToken);
     String extractScreenId(const String& xmlData);
     bool fetchScreenIdWithRetries(const String& applicationUrl, Device& device);
-    String getYouTubeToken(const String& screenId);
+    void launchYouTubeApp(const String& appUrl);
 };
 
 #endif

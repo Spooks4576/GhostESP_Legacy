@@ -1,6 +1,6 @@
 #include "DIALClient.h"
 
-DIALClient::DIALClient(String& ssid, String& password, String& YTUrl) : ssid(ssid), password(password), yturl(yturl){}
+DIALClient::DIALClient(String& ssid, String& password, String& app) : ssid(ssid), password(password), App(app){}
 
 
 String extractMAC(const String& str) {
@@ -275,6 +275,8 @@ void DIALClient::exploreNetwork() {
                 device.applicationUrl = getDialApplicationUrl(device.location);
 
                 if (!device.applicationUrl.isEmpty()) {
+                  if (App == "Youtube")
+                  {
                     if (checkYouTubeAppStatus(device.applicationUrl, device) != 200) {
                         Serial.println("Launching Youtube App");
                         launchYouTubeApp(device.applicationUrl);
@@ -298,6 +300,12 @@ void DIALClient::exploreNetwork() {
                     } else {
                         Serial.println("Timeout reached. YouTube app is not running.");
                     }
+                  }
+                  else if (App == "Netflix")
+                  {
+                    Serial.println("Launching Netflix App");
+                    launchNetflixApp(device.applicationUrl);
+                  }
                 }
             }
         }
@@ -460,6 +468,30 @@ void DIALClient::launchYouTubeApp(const String& appUrl) {
     } else {
         Serial.println("Failed to launch the YouTube app. HTTP Response Code: " + String(httpCode));
     } 
+}
+
+void DIALClient::launchNetflixApp(const String& appUrl) {
+    int startPos = appUrl.indexOf('/', 7);
+    String basePath = (startPos != -1) ? appUrl.substring(startPos) : "/";
+
+    String Netflixpath = basePath + "/Netflix";
+
+    IPAddress extractedIp;
+    uint16_t extractedPort;
+    extractIPAndPort(appUrl, extractedIp, extractedPort);
+
+    HttpClient httpc(client, extractedIp, extractedPort);
+
+    httpc.beginRequest();
+
+    int httpCode = httpc.post(Netflixpath);
+    httpc.sendHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
+    httpc.endRequest();
+
+    if (httpCode == 0) { // 0 Means Success For Netflix
+        Serial.println("Successfully launched the Netflix app.");
+    } else {
+        Serial.println("Failed to launch the Netflix app. HTTP Response Code: " + String(httpCode));
 }
 
 DIALClient::~DIALClient() {

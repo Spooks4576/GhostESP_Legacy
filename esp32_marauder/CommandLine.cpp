@@ -1038,7 +1038,7 @@ void CommandLine::runCommand(String input) {
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
     int p_sw = this->argSearch(&cmd_args, "-p");
-    int u_sw = this->argSearch(&cmd_args, "-u");     
+    int u_sw = this->argSearch(&cmd_args, "-u"); // app name    
     
     String essid = "";
     String pwx = "";
@@ -1072,15 +1072,14 @@ void CommandLine::runCommand(String input) {
     if (p_sw != -1) {
       pwx = cmd_args.get(p_sw + 1);
     }
-    Serial.println("Attempting to join WiFi with ssid " + (String)essid);
    
     if (ytURL.isEmpty())
     {
-       Serial.println("Youtube URL is Empty.");
+       Serial.println("App Name Is Empty.");
        return;
     }
 
-    DIALClient* client = new DIALClient(essid, pwx, ytURL);
+    DIALClient* client = new DIALClient(essid, pwx, ytURL); 
 
     if (client)
     {
