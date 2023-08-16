@@ -132,7 +132,6 @@ public:
     String extractApplicationURL(HttpClient &httpc);
     void extractIPAndPort(const String& appUrl, IPAddress& ip, uint16_t& port);
 
-    
     // Netflix
     void launchNetflixApp(const String& appUrl);
 
