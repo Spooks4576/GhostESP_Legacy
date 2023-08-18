@@ -1236,13 +1236,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 // Function to start running a beacon scan
 void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("beacon");
-  #else
-    return;
-  #endif
+  buffer_obj.open();
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1283,13 +1277,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("station");
-  #else
-    return;
-  #endif
+  buffer_obj.open();
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1330,14 +1318,7 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    if (scan_mode != WIFI_SCAN_SIG_STREN)
-      sd_obj.openCapture("raw");
-  #else
-    return;
-  #endif
+  buffer_obj.open();
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1381,13 +1362,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("deauth");
-  #else
-    return;
-  #endif
+  buffer_obj.open();
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1430,13 +1405,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 // Function for running probe request scan
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("probe");
-  #else
-    return;
-  #endif
+  buffer_obj.open();
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -3294,15 +3263,11 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
 }
 
 void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  bool save_packet = true;
   if (save_packet) {
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.addPacket(snifferPacket->payload, len);
-    #elif defined(HAS_SD)
-      sd_obj.addPacket(snifferPacket->payload, len);
-    #else
+      Serial.println("Got Some Packet");
+      buffer_obj.addPacket(snifferPacket->payload, len, true);
       return;
-    #endif
   }
 }
 

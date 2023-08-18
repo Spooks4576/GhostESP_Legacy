@@ -7,6 +7,8 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "configs.h"
 
+#define WRITE_PACKETS_SERIAL
+
 #ifndef HAS_SCREEN
   #define MenuFunctions_h
   #define Display_h
