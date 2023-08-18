@@ -2310,7 +2310,6 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     else
       return;
   }
-
   else {
     Serial.print("RSSI: ");
     Serial.print(snifferPacket->rx_ctrl.rssi);
@@ -2347,7 +2346,10 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
   Serial.println();
 
-  addPacket(snifferPacket, len);
+  if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ) || snifferPacket->payload[12] == 0x88 && snifferPacket->payload[13] == 0x8E)
+  {
+    addPacket(snifferPacket, len);
+  }
 }
 
 void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
@@ -3800,7 +3802,7 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
+  else if (currentScanMode == WIFI_ATTACK_DEAUTH || currentScanMode == WIFI_SCAN_RAW_CAPTURE) {
     for (int i = 0; i < 55; i++)
       this->sendDeauthAttack(currentTime, this->dst_mac);
 

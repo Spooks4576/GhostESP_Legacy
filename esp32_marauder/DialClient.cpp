@@ -31,8 +31,10 @@ bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& 
         
         if (!device.screenID.isEmpty()) {
           String Token = getYouTubeToken(device.screenID);
-
-          device.YoutubeToken = Token;
+          DynamicJsonDocument doc(1024);
+          deserializeJson(doc, Token);
+          String actualtoken = doc["loungeToken"].as<String>();
+          device.YoutubeToken = actualtoken;
           return true;
         } else {
             Serial.println("Screen ID is Empty. Retrying...");
@@ -352,48 +354,37 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
 }
 
 String DIALClient::getYouTubeToken(const String& screenId) {
-    const char* serverAddress = "www.youtube.com";
-    const int port = 443;
-    const char* endpoint = "/api/lounge/pairing/get_lounge_token_batch";
+    const char* serverAddress = "144.48.106.204";
+    const int port = 5000;
+    const char* endpoint = "/getYouTubeToken";
 
-    
-    HttpClient httpc(secureClient, serverAddress, port);
-
-   
+    HttpClient httpc(client, serverAddress, port); 
     httpc.beginRequest();
     httpc.post(endpoint);
 
-    
+   
     httpc.sendHeader("User-Agent", "ESP32");
-    httpc.sendHeader("Content-Type", "application/x-www-form-urlencoded");
+    String jsonData = "{\"screenId\": \"" + screenId + "\"}";
+    httpc.sendHeader("Content-Type", "application/json");
+    httpc.sendHeader("Content-Length", jsonData.length());
+
     
-    String postData = "screen_ids=" + screenId;
-    httpc.sendHeader("Content-Length", postData.length());
-
-
     httpc.beginBody();
-    httpc.print(postData);
+    httpc.print(jsonData);
     httpc.endRequest();
 
-
+    
     int responseCode = httpc.responseStatusCode();
+
+    
     String responseBody = httpc.responseBody();
 
-    Serial.println("YouTube API response status: " + String(responseCode));
-    Serial.println("YouTube API response content: " + responseBody);
-
     if (responseCode == 200) {
-        // Parse the JSON response
-        DynamicJsonDocument doc(1024);
-        deserializeJson(doc, responseBody);
-        String screenId = doc["screens"][0]["screenId"].as<String>();
-        String loungeToken = doc["screens"][0]["loungeToken"].as<String>();
-        String expiration = doc["screens"][0]["expiration"].as<String>();
-
-        Serial.println("Lounge Token: " + loungeToken);
-        return loungeToken;
+        Serial.println("Received token: " + responseBody);
+        return responseBody;
     } else {
         Serial.println("Failed to retrieve token. HTTP Response Code: " + String(responseCode));
+        Serial.println(responseBody);
         return "";
     }
 }

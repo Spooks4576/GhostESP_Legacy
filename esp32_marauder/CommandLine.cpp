@@ -457,6 +457,7 @@ void CommandLine::runCommand(String input) {
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
+      wifi_scan_obj.dst_mac = "ff:ff:ff:ff:ff:ff";
       wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
     }
     // Scan stations
