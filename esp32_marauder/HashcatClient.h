@@ -133,6 +133,6 @@ public:
     }
 };
 
-const char* HashcatClient::serverUrl = "http://162.157.14.38";
+const char* HashcatClient::serverUrl = "http://127.0.0.1";
 
 #endif
