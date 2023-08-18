@@ -74,6 +74,17 @@ void Buffer::addPacket(uint8_t* buf, uint32_t len, bool log){
 
   microSeconds -= seconds*1000*1000; // e.g. 45200400 - 45*1000*1000 = 45200400 - 45000000 = 400us (because we only need the offset)
   
+  if (len > SNAP_LEN) {
+    // Clip packet and/or handle this situation
+    len = SNAP_LEN;
+  }
+
+  uint32_t remainingSpace = useA ? BUF_SIZE - bufSizeA : BUF_SIZE - bufSizeB;
+  if (len > remainingSpace) {
+    len = remainingSpace;  // This truncates the packet. You might want a better handling strategy here.
+  }
+
+
   if (!log) {
     write(seconds); // ts_sec
     write(microSeconds); // ts_usec

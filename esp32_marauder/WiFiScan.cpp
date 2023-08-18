@@ -3265,8 +3265,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
 void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
   bool save_packet = true;
   if (save_packet) {
-      Serial.println("Got Some Packet");
-      buffer_obj.addPacket(snifferPacket->payload, len, true);
+      buffer_obj.addPacket(snifferPacket->payload, len);  
       return;
   }
 }
