@@ -47,6 +47,7 @@ class SDInterface {
     void runUpdate();
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
+    String getLatestFile(String dirPath);
     //void savePacket(uint8_t* buf, uint32_t len);
 };
 

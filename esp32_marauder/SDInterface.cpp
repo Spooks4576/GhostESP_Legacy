@@ -75,6 +75,46 @@ bool SDInterface::initSD() {
   #endif
 }
 
+String SDInterface::getLatestFile(String dirPath) {
+    if (!this->supported) {
+        Serial.println(F("SD Card not initialized or not supported."));
+        return ""; // Empty string indicates an error or no file found.
+    }
+  
+    File dir = SD.open(dirPath);
+    if (!dir) {
+        Serial.println(F("Failed to open directory"));
+        return "";
+    }
+
+    File entry;
+    String latestFileName = "";
+    uint32_t latestFileTime = 0; // This will hold the latest file's modification time.
+
+    while (true) {
+        entry = dir.openNextFile();
+        if (!entry) {
+            break;  // No more files in directory.
+        }
+      
+        if (!entry.isDirectory()) {
+            uint32_t fileTime = entry.getLastWrite(); // Assuming SD library supports this. 
+            if (fileTime > latestFileTime) {
+                latestFileTime = fileTime;
+                latestFileName = entry.name();
+            }
+        }
+        entry.close();
+    }
+    dir.close();
+
+    if (latestFileName == "") {
+        Serial.println(F("No files found in the directory."));
+    }
+
+    return latestFileName;
+}
+
 File SDInterface::getFile(String path) {
   if (this->supported) {
     File file = SD.open(path, FILE_READ);

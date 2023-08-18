@@ -1,5 +1,6 @@
 #include "CommandLine.h"
 #include "DIALClient.h"
+#include "HashcatClient.h"
 
 CommandLine::CommandLine() {
 }
@@ -1085,5 +1086,43 @@ void CommandLine::runCommand(String input) {
     {
       client->Execute();
     }
+  }
+  else if (cmd_args.get(0) == HASHCAT_CMD) {
+    int n_sw = this->argSearch(&cmd_args, "-n"); // name
+    int a_sw = this->argSearch(&cmd_args, "-a"); // access point
+    int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
+    int p_sw = this->argSearch(&cmd_args, "-p");
+    
+    String essid = "";
+    String pwx = "";
+    
+    if (s_sw != -1) {
+      int index = cmd_args.get(s_sw + 1).toInt();
+      if (!this->inRange(ssids->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = ssids->get(index).essid;
+    } else if (a_sw != -1) {
+      int index = cmd_args.get(a_sw + 1).toInt();
+      if (!this->inRange(access_points->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = access_points->get(index).essid;
+    } else if (n_sw != -1) {
+      essid = cmd_args.get(n_sw + 1);
+    } else {
+      Serial.println("You must specify an access point or ssid");
+      return;
+    }
+    
+    if (p_sw != -1) {
+      pwx = cmd_args.get(p_sw + 1);
+    }
+
+
+    HashcatClient* hcc = new HashcatClient("/ext/apps_data/marauder/pcaps/", essid, pwx);
+
   }
 }
