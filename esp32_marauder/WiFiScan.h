@@ -151,6 +151,9 @@ class WiFiScan
     bool force_pmkid = false;
     bool force_probe = false;
     bool save_pcap = false;
+
+    int DeauthPacketsSent = 0;
+    bool ShouldSendDeauth = true;
   
     int x_pos; //position along the graph x axis
     float y_pos_x; //current graph y axis position of X value

