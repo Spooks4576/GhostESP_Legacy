@@ -105,7 +105,7 @@ const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
-const char PROGMEM HELP_YOUTUBECONNECT_CMD[] = "dialconnect -u <app name> [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
+const char PROGMEM HELP_YOUTUBECONNECT_CMD[] = "dialconnect -u <app name> -c <AppUrl> [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 const char PROGMEM HELP_HASHCAT_CMD[] = "hashcat [-n <ssid_name> -p <password>]";
 
 // WiFi attack

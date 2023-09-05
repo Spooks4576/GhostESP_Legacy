@@ -1040,14 +1040,21 @@ void CommandLine::runCommand(String input) {
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
     int p_sw = this->argSearch(&cmd_args, "-p");
-    int u_sw = this->argSearch(&cmd_args, "-u"); // app name    
+    int u_sw = this->argSearch(&cmd_args, "-u"); // app name
+    int c_sw = this->argSearch(&cmd_args, "-c");    
     
     String essid = "";
     String pwx = "";
-    String ytURL = "";
+    String AppName = "";
+    String YtUrl = "";
 
     if (u_sw != -1) {
-      ytURL = cmd_args.get(u_sw + 1);
+      AppName = cmd_args.get(u_sw + 1);
+    }
+
+    if (c_sw != -1)
+    {
+      YtUrl = cmd_args.get(c_sw + 1);
     }
     
     if (s_sw != -1) {
@@ -1075,13 +1082,13 @@ void CommandLine::runCommand(String input) {
       pwx = cmd_args.get(p_sw + 1);
     }
    
-    if (ytURL.isEmpty())
+    if (AppName.isEmpty())
     {
        Serial.println("App Name Is Empty.");
        return;
     }
 
-    DIALClient* client = new DIALClient(essid, pwx, ytURL); 
+    DIALClient* client = new DIALClient(essid, pwx, AppName, YtUrl); 
 
     if (client)
     {

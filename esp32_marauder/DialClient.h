@@ -6,7 +6,6 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoHttpClient.h>
 #include <WiFiClientSecure.h>
-#include <TinyXML.h>
 #include <set>
 #include <ArduinoJson.h>
 #include <vector>
@@ -99,6 +98,7 @@ public:
     String ssid;
     String password;
     String App;
+    String YTUrl;
     WiFiClient client;
     WiFiClientSecure secureClient;
     WiFiUDP multicastClient;
@@ -120,7 +120,7 @@ public:
         return rid.next();
     }
 
-    DIALClient(String& ssid, String& password, String& App);
+    DIALClient(String& ssid, String& password, String& App, String& YTUrl);
     ~DIALClient();
     void connectWiFi();
     void Execute();

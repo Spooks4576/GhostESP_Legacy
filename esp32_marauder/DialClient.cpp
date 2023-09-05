@@ -1,6 +1,6 @@
 #include "DIALClient.h"
 
-DIALClient::DIALClient(String& ssid, String& password, String& app) : ssid(ssid), password(password), App(app){}
+DIALClient::DIALClient(String& ssid, String& password, String& app, String& YTUrl) : ssid(ssid), password(password), App(app), YTUrl(YTUrl){}
 
 
 String extractMAC(const String& str) {
@@ -253,7 +253,19 @@ std::vector<DIALClient::Device> DIALClient::discoverDevices() {
 }
 
 void DIALClient::exploreNetwork() {
-    std::vector<std::string> strings = {"dQw4w9WgXcQ", "k1BneeJTDcU", "fJ9rUzIMcZQ", "W3GrSMYbkBE"};
+    std::vector<std::string> strings;
+
+
+    if (YTUrl.isEmpty())
+    {
+      strings = {"dQw4w9WgXcQ", "k1BneeJTDcU", "fJ9rUzIMcZQ"};
+    }
+    else 
+    {
+      strings.push_back(YTUrl.c_str());
+    }
+
+
     const int maxRetries = 3;
     bool videoPlayedSuccessfully = false;
 
