@@ -73,7 +73,7 @@ const char PROGMEM SEL_CMD[] = "select";
 const char PROGMEM SSID_CMD[] = "ssid";
 const char PROGMEM JOINWIFI_CMD[] = "join";
 const char PROGMEM YOUTUBECONNECT_CMD[] = "dialconnect";
-const char PROGMEM HASHCAT_CMD[] = "hashcat";
+const char PROGMEM CHROMECONNECT_CMD[] = "chromeconnect";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
@@ -106,7 +106,7 @@ const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 const char PROGMEM HELP_YOUTUBECONNECT_CMD[] = "dialconnect -u <app name> -c <AppUrl> [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
-const char PROGMEM HELP_HASHCAT_CMD[] = "hashcat [-n <ssid_name> -p <password>]";
+const char PROGMEM HELP_CHROMECONNECT_CMD[] = "chromeconnect [-n <ssid_name> -p <password>]";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";

@@ -1,6 +1,6 @@
 #include "CommandLine.h"
 #include "DIALClient.h"
-#include "HashcatClient.h"
+#include "ESPmDNSHelper.h"
 
 CommandLine::CommandLine() {
 }
@@ -1095,7 +1095,7 @@ void CommandLine::runCommand(String input) {
       client->Execute();
     }
   }
-  else if (cmd_args.get(0) == HASHCAT_CMD) {
+  else if (cmd_args.get(0) == CHROMECONNECT_CMD) {
     int n_sw = this->argSearch(&cmd_args, "-n"); // name
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
@@ -1130,7 +1130,6 @@ void CommandLine::runCommand(String input) {
     }
 
 
-    HashcatClient* hcc = new HashcatClient("/ext/apps_data/marauder/pcaps/", essid, pwx);
-
+    ESPmDNSHelper* DNSHelper = new ESPmDNSHelper(essid.c_str(), pwx.c_str());
   }
 }
