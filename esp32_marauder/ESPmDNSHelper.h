@@ -7,10 +7,9 @@
     #include <WiFi.h>
     #include <ESPmDNS.h>
     #include <ArduinoHttpClient.h>
-    #include <WiFiClientSecure.h>
-    #include <iostream>
+    #include <ESP_SSLClient.h>
     #include <ArduinoJson.h>
-    #include <WebSocketClient.h> 
+    #include <WebSocketClient.h>
 #else
     #error "This code is intended for ESP32 only!"
 #endif
@@ -29,7 +28,8 @@ public:
     ~ESPmDNSHelper();
     
     WebSocketClient* webSocket;
-    WiFiClientSecure secureClient;
+    WiFiClient client;
+    ESP_SSLClient secureClient;
     String host;
     uint16_t port;
     const char* ssid;
