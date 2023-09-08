@@ -1,6 +1,5 @@
 #include "ESPmDNSHelper.h"
-
-using namespace api;
+#include <string>
 
 ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword) {
     mdns = new MDNSResponder();
@@ -66,28 +65,11 @@ void ESPmDNSHelper::connectWiFi() {
 
 void ESPmDNSHelper::SendAuth()
 {
-  DeviceAuthMessage<256, 2048> deviceAuthMessage;  
-  AuthResponse<256, 2048> response;
-  AuthChallenge Challenge;
-  AuthError Error;
-
-  deviceAuthMessage.set_challenge(Challenge);
-  deviceAuthMessage.set_response(response);
-  deviceAuthMessage.set_error(Error);
-
-  uint8_t buffer[128]; 
   
-  EmbeddedProto::WriteBufferFixedSize<sizeof(buffer)> writeBuffer;
-
-  EmbeddedProto::Error error = deviceAuthMessage.serialize(writeBuffer);
-  if(error != EmbeddedProto::Error::NO_ERRORS) {
-    Serial.println("Serialization had an error");
-    return;
-  }
-
+  String buffer;
   
   webSocket->beginMessage(2);
-  webSocket->write(buffer, writeBuffer.get_size());
+  //webSocket->write(, );
   webSocket->endMessage();
 
 

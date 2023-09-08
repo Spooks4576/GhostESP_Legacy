@@ -334,7 +334,7 @@ void DIALClient::exploreNetwork() {
 void DIALClient::sendYouTubeCommand(const String& command, const String& videoId, const String& loungeToken) {
     const char* serverAddress = "144.48.106.204";  // For now Requires a custom server to handle request will be kept like this for speed purposes 
     const int port = 5000;
-    const char* endpoint = "/sendCommand";
+    const char* endpoint = "/youtube/sendCommand";
 
     HttpClient httpc(client, serverAddress, port); 
     httpc.beginRequest();
@@ -368,7 +368,7 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
 String DIALClient::getYouTubeToken(const String& screenId) {
     const char* serverAddress = "144.48.106.204";
     const int port = 5000;
-    const char* endpoint = "/getYouTubeToken";
+    const char* endpoint = "/youtube/getYouTubeToken";
 
     HttpClient httpc(client, serverAddress, port); 
     httpc.beginRequest();

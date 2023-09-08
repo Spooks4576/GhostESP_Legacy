@@ -8,13 +8,13 @@
     #include <ESPmDNS.h>
     #include <ArduinoHttpClient.h>
     #include <WiFiClientSecure.h>
-    #include "protobuf/WriteBufferFixedSize.h"
-    #include "protobuf/cast_channel_pb.h"
+    #include <iostream>
     #include <ArduinoJson.h>
     #include <WebSocketClient.h> 
 #else
     #error "This code is intended for ESP32 only!"
 #endif
+
 
 struct Devices
 {
