@@ -4,11 +4,11 @@
 #include <Arduino.h>
 #include <vector>
 #if defined(ESP32)
-    #include <WiFi.h>
+    #include <WiFiClientSecure.h>
     #include <ESPmDNS.h>
     #include <ArduinoHttpClient.h>
-    #include <ESP_SSLClient.h>
     #include <ArduinoJson.h>
+    #include <BearSSLClient.h>
     #include <WebSocketClient.h>
 #else
     #error "This code is intended for ESP32 only!"
@@ -26,10 +26,9 @@ class ESPmDNSHelper {
 public:
     ESPmDNSHelper(const char* inSsid, const char* inpaSsword);
     ~ESPmDNSHelper();
-    
-    WebSocketClient* webSocket;
-    WiFiClient client;
-    ESP_SSLClient secureClient;
+
+    WiFiClient unsecureclient;
+    WiFiClientSecure client;
     String host;
     uint16_t port;
     const char* ssid;
@@ -44,9 +43,9 @@ public:
 
     void SendAuth();
 
-    void CheckMessageLoop();
+    void sendMessageToChromecast(const char* hexData);
 
-    void HandleMessage(String message);
+    void CheckMessageLoop();
 private:
     MDNSResponder* mdns;
     std::vector<Devices> NetDevices;
