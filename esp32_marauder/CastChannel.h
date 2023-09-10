@@ -1,6 +1,7 @@
 #pragma once
 
 #include <WiFiClientSecure.h>
+#include <ESP_SSLClient.h>
 #include <ArduinoJson.h>
 #include <ArduinoHttpClient.h>
 
@@ -27,7 +28,7 @@ void hexStringToBytes(const String& hex, byte* buffer, int bufferSize) {
 
 class Channel {
   private:
-    WiFiClientSecure& client;
+    BSSL_TCP_Client& client;
     WiFiClient unsecureclient;
     String sourceId;
     String destinationId;
@@ -36,7 +37,7 @@ class Channel {
     void (*messageCallback)(String);  // Callback function to handle received messages
 
   public:
-    Channel(WiFiClientSecure& clientRef, String srcId, String destId, String ns, String enc = "")
+    Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "")
       : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), messageCallback(nullptr) {}
 
     void setMessageCallback(void (*callback)(String)) {
@@ -117,9 +118,16 @@ class Channel {
       {
 
         int bytes = client.available();
+        Serial.println("Received Bytes...");
 
-        Serial.println("Recieved Bytes...");
-        Serial.print(bytes, HEX);
+        for (int i = 0; i < bytes; i++) 
+        {
+            byte b = client.read(); // Read one byte
+            if (b < 16) Serial.print('0'); // Print leading zero for single-digit hex values
+            Serial.print(b, HEX);
+            Serial.print(" "); // Optional: Add space between bytes for clarity
+        }
+        Serial.println();
       }
     }
 

@@ -2,7 +2,6 @@
 
 DIALClient::DIALClient(String& ssid, String& password, String& app, String& YTUrl) : ssid(ssid), password(password), App(app), YTUrl(YTUrl){}
 
-
 String extractMAC(const String& str) {
     int startIndex = str.indexOf("MAC=") + 4;
     int endIndex = str.indexOf(";", startIndex);
@@ -12,6 +11,51 @@ String extractMAC(const String& str) {
     } else {
         return "";
     }
+}
+
+String extractJSON(const String& response) {
+  // Find the end of the headers
+  int startIndex = response.indexOf("\r\n\r\n");
+  if (startIndex == -1) return ""; // Headers not found
+  
+  // Skip headers
+  startIndex += 4;
+
+  // Skip chunk sizes (assuming they are always 4 characters long for simplicity)
+  startIndex += 4;
+
+  // Find the end of the JSON content
+  int endIndex = response.lastIndexOf("]");
+
+  // Extract the JSON
+  return response.substring(startIndex, endIndex + 1);
+}
+
+String zx() {
+      String result = "";
+      const char* characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      const int charactersLength = strlen(characters);
+      const int stringLength = 12;
+
+      for (int i = 0; i < stringLength; i++) {
+        char randomChar = characters[random(0, charactersLength)];
+        result += randomChar;
+      }
+
+      return result;
+}
+
+String generateUUID() {
+  String uuid = "";
+
+  
+  randomSeed(analogRead(0) + millis());
+
+  for (int i = 0; i < 4; i++) {
+    uuid += String(random(0xFFFFFFF), HEX);
+  }
+
+  return uuid;
 }
 
 std::string getRandomString(const std::vector<std::string>& vec) {
@@ -31,10 +75,8 @@ bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& 
         
         if (!device.screenID.isEmpty()) {
           String Token = getYouTubeToken(device.screenID);
-          DynamicJsonDocument doc(1024);
-          deserializeJson(doc, Token);
-          String actualtoken = doc["loungeToken"].as<String>();
-          device.YoutubeToken = actualtoken;
+          device.YoutubeToken = Token;
+          BindSessionID(device);
           return true;
         } else {
             Serial.println("Screen ID is Empty. Retrying...");
@@ -309,7 +351,7 @@ void DIALClient::exploreNetwork() {
 
                     if (isYouTubeRunning) {
                         if (fetchScreenIdWithRetries(device.applicationUrl, device)) {
-                            sendYouTubeCommand("setPlaylist", getRandomString(strings).c_str(), device.YoutubeToken);
+                            sendYouTubeCommand("setPlaylist", getRandomString(strings).c_str(), device);
                         }
                     } else {
                         Serial.println("Timeout reached. YouTube app is not running.");
@@ -331,72 +373,197 @@ void DIALClient::exploreNetwork() {
     delete this;
 }
 
-void DIALClient::sendYouTubeCommand(const String& command, const String& videoId, const String& loungeToken) {
-    const char* serverAddress = "144.48.106.204";  // For now Requires a custom server to handle request will be kept like this for speed purposes 
-    const int port = 5000;
-    const char* endpoint = "/youtube/sendCommand";
-
-    HttpClient httpc(client, serverAddress, port); 
-    httpc.beginRequest();
-    httpc.post(endpoint);
+void DIALClient::BindSessionID(Device& Device)
+{
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/bc/bind";
 
     
-    String jsonData = "{\"command\": \"" + command + "\", \"params\": {\"videoId\": \"" + videoId + "\"}, \"loungeToken\": \"" + loungeToken + "\"}";
-
-    
-    httpc.sendHeader("User-Agent", "ESP32");
-    httpc.sendHeader("Content-Type", "application/json");
-    httpc.sendHeader("Content-Length", jsonData.length());
-    
-  
-    httpc.beginBody();
-    httpc.print(jsonData);
-    httpc.endRequest();
-
-  
-    int responseCode = httpc.responseStatusCode();
-    String responseBody = httpc.responseBody();
-
-    if (responseCode == 200) {
-        Serial.println("Command sent successfully: " + responseBody);
-    } else {
-        Serial.println("Failed to send command. HTTP Response Code: " + String(responseCode));
-        Serial.println(responseBody);
+    if (!secureClient.connect(serverAddress, port)) {
+        Serial.println("Connection failed!");
+        return;
     }
+    
+    String UUID = generateUUID();
+
+
+    String urlParams = "device=REMOTE_CONTROL";
+    urlParams += "&mdx-version=3";
+    urlParams += "&ui=1";
+    urlParams += "&v=2";
+    urlParams += "&name=Flipper_0";
+    urlParams += "&app=youtube-desktop";
+    urlParams += "&loungeIdToken=" + Device.YoutubeToken;
+    urlParams += "&id=" + UUID;
+    urlParams += "&VER=8";
+    urlParams += "&CVER=1";
+    urlParams += "&zx=" + zx();
+    urlParams += "&RID=" + String(rid.next());
+
+    
+    String jsonData = "{count: 0 }";
+
+    
+    secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
+    secureClient.print("Host: " + String(serverAddress) + "\r\n");
+    secureClient.print("User-Agent: ESP32\r\n");
+    secureClient.print("Content-Type: application/json\r\n");
+    secureClient.print("Content-Length: " + String(jsonData.length()) + "\r\n");
+    secureClient.print("\r\n");
+    secureClient.print(jsonData);
+
+    
+    while (!secureClient.available()) {
+        delay(10);
+    }
+
+    
+    String response = secureClient.readString();
+    Serial.println(response);
+
+    DynamicJsonDocument doc(4096);
+    Serial.println(extractJSON(response));
+    DeserializationError error = deserializeJson(doc, extractJSON(response));
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.c_str());
+      return;
+    }
+
+    JsonArray array = doc.as<JsonArray>();
+    String gsession;
+    String SID;
+
+    for (JsonVariant v : array) {
+      if (v[0] == 1 && v[1][0] == "S") {
+        gsession = v[1][1].as<String>();
+      }
+      if (v[0] == 0 && v[1][0] == "c") {
+        SID = v[1][1].as<String>();
+      }
+    }
+
+    Serial.println("gsession: " + gsession);
+    Serial.println("SID: " + SID);
+
+    Device.gsession = gsession;
+    Device.UUID = UUID;
+    Device.SID = SID;
+
+    secureClient.stop();
+}
+
+void DIALClient::sendYouTubeCommand(const String& command, const String& videoId, const Device& device) {
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/bc/bind";
+
+    
+    if (!secureClient.connect(serverAddress, port)) {
+        Serial.println("Connection failed!");
+        return;
+    }
+    
+    String urlParams = "device=REMOTE_CONTROL";
+    urlParams += "&loungeIdToken=" + device.YoutubeToken;
+    urlParams += "&id=" + device.UUID;
+    urlParams += "&VER=8";
+    urlParams += "&zx=" + zx();
+    urlParams += "&SID=" + device.SID;
+    urlParams += "&RID=" + String(rid.next());
+    urlParams += "&AID=" + String("-1");
+    urlParams += "&gsessionid=" + device.gsession;
+
+    
+    String jsonData = "{\"command\": \"" + command + "\", \"params\": {\"videoId\": \"" + videoId + "\"}, \"loungeToken\": \"" + device.YoutubeToken + "\"}";
+
+    
+    secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
+    secureClient.print("Host: " + String(serverAddress) + "\r\n");
+    secureClient.print("User-Agent: ESP32\r\n");
+    secureClient.print("Content-Type: application/json\r\n");
+    secureClient.print("Content-Length: " + String(jsonData.length()) + "\r\n");
+    secureClient.print("\r\n");
+    secureClient.print(jsonData);
+
+    
+    while (!secureClient.available()) {
+        delay(10);
+    }
+
+    
+    String response = secureClient.readString();
+    Serial.println(response);
 }
 
 String DIALClient::getYouTubeToken(const String& screenId) {
-    const char* serverAddress = "144.48.106.204";
-    const int port = 5000;
-    const char* endpoint = "/youtube/getYouTubeToken";
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/pairing/get_lounge_token_batch";
 
-    HttpClient httpc(client, serverAddress, port); 
-    httpc.beginRequest();
-    httpc.post(endpoint);
+    if (secureClient.connect(serverAddress, port)) {
+        Serial.println("Connected to server.");
 
-   
-    httpc.sendHeader("User-Agent", "ESP32");
-    String jsonData = "{\"screenId\": \"" + screenId + "\"}";
-    httpc.sendHeader("Content-Type", "application/json");
-    httpc.sendHeader("Content-Length", jsonData.length());
 
-    
-    httpc.beginBody();
-    httpc.print(jsonData);
-    httpc.endRequest();
+        String postData = "screen_ids=" + screenId;
+        secureClient.print("POST " + String(endpoint) + " HTTP/1.1\r\n");
+        secureClient.print("Host: " + String(serverAddress) + "\r\n");
+        secureClient.print("User-Agent: ESP32\r\n");
+        secureClient.print("Content-Type: application/x-www-form-urlencoded\r\n");
+        secureClient.print("Content-Length: " + String(postData.length()) + "\r\n");
+        secureClient.print("\r\n");
+        secureClient.print(postData);
 
-    
-    int responseCode = httpc.responseStatusCode();
+        
+        while (!secureClient.available()) {
+          delay(10);
+        }
 
-    
-    String responseBody = httpc.responseBody();
+        
+        String entireResponse = secureClient.readString();
 
-    if (responseCode == 200) {
-        Serial.println("Received token: " + responseBody);
-        return responseBody;
+        
+        int firstNewline = entireResponse.indexOf('\n');
+        String statusLine = entireResponse.substring(0, firstNewline);
+        int statusCode = statusLine.substring(9, 12).toInt();
+        Serial.println("YouTube API response status: " + String(statusCode));
+
+        String responseBody = "";
+
+        
+        int endOfHeaders = entireResponse.indexOf("\n\r\n");
+        if (endOfHeaders != -1) {
+            responseBody = entireResponse.substring(endOfHeaders + 3);
+            Serial.println("YouTube API response content: " + responseBody);
+        } else {
+            Serial.println("Failed to parse response headers.");
+        }
+
+        
+        int startOfJson = responseBody.indexOf('{');
+        if (startOfJson != -1) {
+            responseBody = responseBody.substring(startOfJson);
+        } else {
+            Serial.println("Failed to find start of JSON content.");
+            return "";
+        }
+
+        if (statusCode == 200) {
+
+            DynamicJsonDocument doc(1024);
+            deserializeJson(doc, responseBody);
+            String loungeToken = doc["screens"][0]["loungeToken"].as<String>();
+            Serial.println("Lounge Token: " + loungeToken);
+            secureClient.stop();
+            return loungeToken;
+        } else {
+            Serial.println("Failed to retrieve token. HTTP Response Code: " + String(statusCode));
+            return "";
+        }
     } else {
-        Serial.println("Failed to retrieve token. HTTP Response Code: " + String(responseCode));
-        Serial.println(responseBody);
+        Serial.println("Failed to connect to server.");
         return "";
     }
 }

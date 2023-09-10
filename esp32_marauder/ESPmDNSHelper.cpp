@@ -69,9 +69,9 @@ void ESPmDNSHelper::connectWiFi() {
 
 void ESPmDNSHelper::SendAuth()
 {
-  Channel ConnectChannel(client, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection", "JSON");
-  Channel HeartBeat(client, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat", "JSON");
-  Channel RecieverChannel(client, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.receiver", "JSON");
+  Channel ConnectChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection", "JSON");
+  Channel HeartBeat(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat", "JSON");
+  Channel RecieverChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.receiver", "JSON");
 
   RecieverChannel.setMessageCallback(HandleMessage);
   HeartBeat.setMessageCallback(HandleMessage);
@@ -125,7 +125,9 @@ bool ESPmDNSHelper::initializeClient(const char* _host, uint16_t _port)
   host = _host;
   port = _port;
 
-  BearSSLClient SSLClient(client);
+  SSLClient.setClient(&unsecureclient);
+
+  SSLClient.allowSelfSignedCerts();
 
   if (SSLClient.connect(host.c_str(), port)) {
 

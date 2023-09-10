@@ -5,10 +5,10 @@
 
 #include <WiFiClientSecure.h>
 #include <ArduinoHttpClient.h>
-#include <WiFiClientSecure.h>
 #include <set>
 #include <ArduinoJson.h>
 #include <vector>
+    
 
 struct MACAddress {
     uint8_t bytes[6];
@@ -114,6 +114,9 @@ public:
         String wakeup;
         String screenID;
         String YoutubeToken;
+        String gsession;
+        String SID;
+        String UUID;
     };
 
     uint32_t getNextRID() {
@@ -138,10 +141,11 @@ public:
     // Youtube
     int checkYouTubeAppStatus(const String& appUrl, Device& device);
     String getYouTubeToken(const String& screenId);
-    void sendYouTubeCommand(const String& command, const String& videoId, const String& loungeToken);
+    void sendYouTubeCommand(const String& command, const String& videoId, const Device& device);
     String extractScreenId(const String& xmlData);
     bool fetchScreenIdWithRetries(const String& applicationUrl, Device& device);
     void launchYouTubeApp(const String& appUrl);
+    void BindSessionID(Device& device);
 };
 
 #endif

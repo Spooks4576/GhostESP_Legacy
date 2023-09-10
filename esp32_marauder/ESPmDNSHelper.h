@@ -8,7 +8,7 @@
     #include <ESPmDNS.h>
     #include <ArduinoHttpClient.h>
     #include <ArduinoJson.h>
-    #include <BearSSLClient.h>
+    #include <ESP_SSLClient.h>
     #include <WebSocketClient.h>
 #else
     #error "This code is intended for ESP32 only!"
@@ -28,7 +28,7 @@ public:
     ~ESPmDNSHelper();
 
     WiFiClient unsecureclient;
-    WiFiClientSecure client;
+    BSSL_TCP_Client SSLClient;
     String host;
     uint16_t port;
     const char* ssid;
