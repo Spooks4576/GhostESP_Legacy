@@ -14,15 +14,9 @@ String extractMAC(const String& str) {
 }
 
 String extractJSON(const String& response) {
-  // Find the end of the headers
-  int startIndex = response.indexOf("\r\n\r\n");
-  if (startIndex == -1) return ""; // Headers not found
-  
-  // Skip headers
-  startIndex += 4;
-
-  // Skip chunk sizes (assuming they are always 4 characters long for simplicity)
-  startIndex += 4;
+  // Find the start of the JSON content (assuming it always starts with '[')
+  int startIndex = response.indexOf("[[");
+  if (startIndex == -1) return ""; // JSON not found
 
   // Find the end of the JSON content
   int endIndex = response.lastIndexOf("]");
@@ -404,6 +398,8 @@ void DIALClient::BindSessionID(Device& Device)
     
     String jsonData = "{count: 0 }";
 
+    Serial.println(String(endpoint) + "?" + urlParams);
+
     
     secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
     secureClient.print("Host: " + String(serverAddress) + "\r\n");
@@ -420,7 +416,6 @@ void DIALClient::BindSessionID(Device& Device)
 
     
     String response = secureClient.readString();
-    Serial.println(response);
 
     DynamicJsonDocument doc(4096);
     Serial.println(extractJSON(response));
@@ -473,9 +468,11 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
     urlParams += "&zx=" + zx();
     urlParams += "&SID=" + device.SID;
     urlParams += "&RID=" + String(rid.next());
-    urlParams += "&AID=" + String("-1");
+    urlParams += "&AID=" + String("5");
     urlParams += "&gsessionid=" + device.gsession;
 
+    
+    Serial.println(String(endpoint) + "?" + urlParams);
     
     String jsonData = "{\"command\": \"" + command + "\", \"params\": {\"videoId\": \"" + videoId + "\"}, \"loungeToken\": \"" + device.YoutubeToken + "\"}";
 
@@ -495,6 +492,7 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
 
     
     String response = secureClient.readString();
+    Serial.println("Set playlist Response");
     Serial.println(response);
 }
 
