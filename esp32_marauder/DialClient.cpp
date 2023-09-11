@@ -379,7 +379,7 @@ void DIALClient::BindSessionID(Device& Device)
         return;
     }
     
-    String UUID = generateUUID();
+    Device.UUID = generateUUID();
 
 
     String urlParams = "device=REMOTE_CONTROL";
@@ -389,7 +389,7 @@ void DIALClient::BindSessionID(Device& Device)
     urlParams += "&name=Flipper_0";
     urlParams += "&app=youtube-desktop";
     urlParams += "&loungeIdToken=" + Device.YoutubeToken;
-    urlParams += "&id=" + UUID;
+    urlParams += "&id=" + Device.UUID;
     urlParams += "&VER=8";
     urlParams += "&CVER=1";
     urlParams += "&zx=" + zx();
@@ -403,9 +403,10 @@ void DIALClient::BindSessionID(Device& Device)
     
     secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
     secureClient.print("Host: " + String(serverAddress) + "\r\n");
-    secureClient.print("User-Agent: ESP32\r\n");
+    secureClient.print("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n");
     secureClient.print("Content-Type: application/json\r\n");
     secureClient.print("Content-Length: " + String(jsonData.length()) + "\r\n");
+    secureClient.print("Origin: https://www.youtube.com\r\n");
     secureClient.print("\r\n");
     secureClient.print(jsonData);
 
@@ -433,24 +434,21 @@ void DIALClient::BindSessionID(Device& Device)
     String LID;
 
     for (JsonVariant v : array) {
-      if (v[0] == 1 && v[1][0] == "S") {
-        gsession = v[1][1].as<String>();
-      }
-      if (v[0] == 0 && v[1][0] == "c") {
-        SID = v[1][1].as<String>();
-      }
-
-      if (v[0] == 3 && v[1][0] == "listId") {
-        LID = v[1][1].as<String>();
-      }
-
+        if (v[0].as<int>() == 0 && v[1][0].as<String>() == "c") {
+            SID = v[1][1].as<String>();
+        }
+        if (v[0].as<int>() == 1 && v[1][0].as<String>() == "S") {
+            gsession = v[1][1].as<String>();
+        }
+        if (v[0].as<int>() == 3 && v[1][0].as<String>() == "playlistModified") {
+            LID = v[1][1]["listId"].as<String>();
+        }
     }
 
     Serial.println("gsession: " + gsession);
     Serial.println("SID: " + SID);
 
     Device.gsession = gsession;
-    Device.UUID = UUID;
     Device.SID = SID;
     Device.listID = LID;
 
@@ -481,30 +479,23 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
     
     Serial.println(String(endpoint) + "?" + urlParams);
     
+    String formData;
+    formData += "count=1";
+    formData += "&ofs=0";
+    formData += "&req0__sc=" + command;
+    formData += "&req0_videoId=" + videoId;
+    formData += "&req0_listId=" + device.listID;
 
-    String jsonData;
-
-    DynamicJsonDocument doc(4096);
-
-    doc["count"] = "1";
-
-    doc["ofs"] = "0";
-
-    doc["req0__sc"] = command;
-
-    doc["req0_videoId"] = videoId;
-
-    doc["req0_listId"] = device.listID;
-
-    serializeJson(doc, jsonData);
+    Serial.println(formData);
     
     secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
     secureClient.print("Host: " + String(serverAddress) + "\r\n");
-    secureClient.print("User-Agent: ESP32\r\n");
-    secureClient.print("Content-Type: application/json\r\n");
-    secureClient.print("Content-Length: " + String(jsonData.length()) + "\r\n");
+    secureClient.print("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n");
+    secureClient.print("Content-Type: application/x-www-form-urlencoded\r\n");
+    secureClient.print("Content-Length: " + String(formData.length()) + "\r\n");
+    secureClient.print("Origin: https://www.youtube.com\r\n");
     secureClient.print("\r\n");
-    secureClient.print(jsonData);
+    secureClient.print(formData);
 
     
     while (!secureClient.available()) {
