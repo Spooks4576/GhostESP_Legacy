@@ -16,8 +16,6 @@
 #else
   #include "Buffer.h"
 #endif
-#include "lang_var.h"
-
 extern Settings settings_obj;
 #ifndef WRITE_PACKETS_SERIAL
   extern SDInterface sd_obj;

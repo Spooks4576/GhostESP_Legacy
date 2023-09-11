@@ -44,8 +44,6 @@ https://www.online-utility.org/image/convert/to/XBM
 //#include "esp_interface.h"
 #include "settings.h"
 #include "CommandLine.h"
-#include "lang_var.h"
-
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif

@@ -1,5 +1,4 @@
 #include "MenuFunctions.h"
-#include "lang_var.h"
 //#include "icons.h"
 
 #ifdef HAS_SCREEN

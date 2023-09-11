@@ -256,7 +256,7 @@ void EvilPortal::convertStringToUint8Array(const String& str, uint8_t*& buf, uin
 }
 
 void EvilPortal::addLog(String log, int len) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  bool save_packet = settings_obj.loadSetting<bool>("SavePCAP");
   if (save_packet) {
     uint8_t* logBuffer = nullptr;
     uint32_t logLength = 0;

@@ -430,6 +430,7 @@ void DIALClient::BindSessionID(Device& Device)
     JsonArray array = doc.as<JsonArray>();
     String gsession;
     String SID;
+    String LID;
 
     for (JsonVariant v : array) {
       if (v[0] == 1 && v[1][0] == "S") {
@@ -438,6 +439,11 @@ void DIALClient::BindSessionID(Device& Device)
       if (v[0] == 0 && v[1][0] == "c") {
         SID = v[1][1].as<String>();
       }
+
+      if (v[0] == 3 && v[1][0] == "listId") {
+        LID = v[1][1].as<String>();
+      }
+
     }
 
     Serial.println("gsession: " + gsession);
@@ -446,6 +452,7 @@ void DIALClient::BindSessionID(Device& Device)
     Device.gsession = gsession;
     Device.UUID = UUID;
     Device.SID = SID;
+    Device.listID = LID;
 
     secureClient.stop();
 }
@@ -474,8 +481,22 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
     
     Serial.println(String(endpoint) + "?" + urlParams);
     
-    String jsonData = "{\"command\": \"" + command + "\", \"params\": {\"videoId\": \"" + videoId + "\"}, \"loungeToken\": \"" + device.YoutubeToken + "\"}";
 
+    String jsonData;
+
+    DynamicJsonDocument doc(4096);
+
+    doc["count"] = "1";
+
+    doc["ofs"] = "0";
+
+    doc["req0__sc"] = command;
+
+    doc["req0_videoId"] = videoId;
+
+    doc["req0_listId"] = device.listID;
+
+    serializeJson(doc, jsonData);
     
     secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
     secureClient.print("Host: " + String(serverAddress) + "\r\n");

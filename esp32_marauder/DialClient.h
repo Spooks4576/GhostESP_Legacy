@@ -117,6 +117,7 @@ public:
         String gsession;
         String SID;
         String UUID;
+        String listID;
     };
 
     uint32_t getNextRID() {

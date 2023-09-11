@@ -1,6 +1,4 @@
 #include "Display.h"
-#include "lang_var.h"
-
 #ifdef HAS_SCREEN
 
 Display::Display()
