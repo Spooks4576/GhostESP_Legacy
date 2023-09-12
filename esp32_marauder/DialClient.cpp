@@ -60,8 +60,8 @@ std::string getRandomString(const std::vector<std::string>& vec) {
     return vec[randomIndex];
 }
 
-const int MAX_RETRIES = 7;
-const int RETRY_DELAY = 2000;
+const int MAX_RETRIES = 50;
+const int RETRY_DELAY = 500;
 
 bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& device) {
     for (int i = 0; i < MAX_RETRIES; i++) {
@@ -166,7 +166,7 @@ void DIALClient::connectWiFi() {
     Serial.println("[connectWiFi] Initiating WiFi connection.");
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
+        delay(500);
         Serial.println("[connectWiFi] Connecting to WiFi...");
     }
     Serial.println("[connectWiFi] Connected to WiFi.");
@@ -221,8 +221,8 @@ bool DIALClient::parseSSDPResponse(const String& response, Device& device) {
 }
 
 std::vector<DIALClient::Device> DIALClient::discoverDevices() {
-    const int MAX_RETRIES = 5; 
-    const int RETRY_DELAY = 5000;
+    const int MAX_RETRIES = 10; 
+    const int RETRY_DELAY = 2000;
 
     std::vector<Device> devices;
      std::set<String> discoveredUSNs;
@@ -252,7 +252,7 @@ std::vector<DIALClient::Device> DIALClient::discoverDevices() {
               multicastClient.beginPacket(IPAddress(239,255,255,250), 1900);
               multicastClient.write((const uint8_t *)mSearchRequest, sizeof(mSearchRequest));
               multicastClient.endPacket();
-              delay(2000); 
+              delay(500); 
           }
 
           multicastClient.write(mSearchRequest, sizeof(mSearchRequest));
@@ -340,7 +340,7 @@ void DIALClient::exploreNetwork() {
                             isYouTubeRunning = true;
                             break;
                         }
-                        delay(500);
+                        delay(100);
                     }
 
                     if (isYouTubeRunning) {

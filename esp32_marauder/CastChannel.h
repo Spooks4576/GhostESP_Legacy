@@ -8,14 +8,17 @@
 #define MAX_BUFFER_SIZE 1024
 
 
+int threshold = 50;
+
+
 byte hexCharToByte(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    return 0; // Not a valid hex character
+    return 0;
 }
 
-// Function to convert a hex string to bytes
+
 void hexStringToBytes(const String& hex, byte* buffer, int bufferSize) {
     int byteCount = 0;
     for (int i = 0; i < hex.length() && byteCount < bufferSize; i += 2) {
@@ -34,15 +37,58 @@ class Channel {
     String destinationId;
     String namespace_;
     String encoding;
-    void (*messageCallback)(String);  // Callback function to handle received messages
+    void (*messageCallback)(BSSL_TCP_Client, String, String);
 
   public:
     Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "")
       : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), messageCallback(nullptr) {}
 
-    void setMessageCallback(void (*callback)(String)) {
+    void setMessageCallback(void (*callback)(BSSL_TCP_Client, String, String)) {
       messageCallback = callback;
     }
+
+    String Deserialize_Internal(String serializedData) {
+      const char* serverAddress = "144.48.106.204";  // Your server address
+      const int port = 5000;
+      const char* endpoint = "/protobuf/deserialize";
+
+      String Payload;
+      DynamicJsonDocument serializeddoc(1024);
+      serializeddoc["protobuf"] = serializedData;
+      serializeJson(serializeddoc, Payload);
+
+      HttpClient httpc(unsecureclient, serverAddress, port); 
+      httpc.beginRequest();
+      httpc.post(endpoint);
+
+      httpc.sendHeader("User-Agent", "ESP32");
+      httpc.sendHeader("Content-Type", "application/json");
+      httpc.sendHeader("Content-Length", serializedData.length());
+
+      httpc.beginBody();
+      httpc.print(Payload);
+      httpc.endRequest();
+
+      int responseCode = httpc.responseStatusCode();
+      String responseBody = httpc.responseBody();
+
+      DynamicJsonDocument doc(1024);
+      deserializeJson(doc, responseBody);
+
+      if (responseCode == 200) {
+        if (doc.containsKey("data")) {
+          String jsonData = doc["data"].as<String>();
+          return jsonData;
+        } else if (doc.containsKey("error")) {
+          Serial.printf("Server Error: %s\n", doc["error"].as<String>().c_str());
+          return "";
+        }
+      } else {
+        Serial.printf("Failed! Got a Response Code of %i\n", responseCode);
+        return "";
+      }
+    }
+
 
     String Seralize_Internal(String Data)
     {
@@ -58,20 +104,25 @@ class Channel {
       String userAgentValue = "GND/0.90.5  (X11; Linux x86_64)";
 
 
-      StaticJsonDocument<200> docs;
+      StaticJsonDocument<800> docs;
 
 
       docs["source_id"] = sourceId;
       docs["destination_id"] = destinationId;
       docs["namespace_"] = namespace_;
-      docs["payload_type"] = 1;
+      docs["payload_type"] = 0;
 
-      //JsonObject payload_utf8 = docs.createNestedObject("payload_utf8");
-      docs["payload_utf8"] = Data;
+
+      DynamicJsonDocument payloadDoc(1024);
+      deserializeJson(payloadDoc, Data);
+
+      docs["payload_utf8"] = payloadDoc;
 
       
       String jsonString;
       serializeJson(docs, jsonString);
+
+      Serial.println(jsonString);
 
       httpc.sendHeader("User-Agent", "ESP32");
       httpc.sendHeader("Content-Type", "application/json");
@@ -114,41 +165,68 @@ class Channel {
       }
 
     void checkForMessages() {
-      if (client.available()) 
+      const int maxBytesToRead = 256;
+      byte buffer[maxBytesToRead];
+      int bytesRead = client.read(buffer, min(client.available(), maxBytesToRead));
+
+      String serializedData = "";
+
+      for (int i = 0; i < bytesRead; i++) {
+          if (buffer[i] < 16) serializedData += '0'; 
+          serializedData += String(buffer[i], HEX);
+      }
+
+      if (bytesRead > 0) 
       {
+          Serial.println("Received data: " + serializedData);
+          String jsonData = Deserialize_Internal(serializedData);
 
-        int bytes = client.available();
-        Serial.println("Received Bytes...");
+          onMessage(sourceId, destinationId, namespace_, jsonData);
 
-        for (int i = 0; i < bytes; i++) 
-        {
-            byte b = client.read(); // Read one byte
-            if (b < 16) Serial.print('0'); // Print leading zero for single-digit hex values
-            Serial.print(b, HEX);
-            Serial.print(" "); // Optional: Add space between bytes for clarity
-        }
-        Serial.println();
+          if (jsonData != "") {
+              Serial.println("Deserialized data: " + jsonData);
+          } else 
+          {
+              Serial.println("Failed to deserialize data or received empty response.");
+          }
+      }
+      else 
+      {
+          Serial.println("Received data length is not appropriate.");
       }
     }
 
-    void onMessage(String srcId, String destId, String ns, String data) {
-      if (srcId != destinationId) return;
-      if (destId != sourceId && destId != "*") return;
-      if (ns != namespace_) return;
 
-      String decodedData = decode(data);
-      if (messageCallback) {
-        messageCallback(decodedData);
-      }
+
+    void onMessage(String srcId, String destId, String ns, String data) {
+        String decodedData = decode(data);
+
+        
+        DynamicJsonDocument doc(1024);
+        deserializeJson(doc, decodedData);
+
+        
+        String Session = doc["sessionId"].as<String>();
+
+        
+        if (messageCallback) {
+            messageCallback(client, Session, decodedData);
+        }
     }
 
     void send(String Data) {
       String serializedData = Seralize_Internal(Data);
-      byte buffer[serializedData.length() / 2];  // Each byte is represented by 2 hex chars
+      byte buffer[4 + serializedData.length() / 2];  
 
-      hexStringToBytes(serializedData, buffer, sizeof(buffer));
+      
+      uint32_t dataLength = serializedData.length() / 2;
+      buffer[0] = (dataLength >> 24) & 0xFF;
+      buffer[1] = (dataLength >> 16) & 0xFF;
+      buffer[2] = (dataLength >> 8) & 0xFF;
+      buffer[3] = dataLength & 0xFF;
 
-      Serial.println(serializedData);
+      
+      hexStringToBytes(serializedData, buffer + 4, dataLength);
 
       client.write(buffer, sizeof(buffer));
     }

@@ -8,9 +8,56 @@ ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword) {
     connectWiFi();
 }
 
-void HandleMessage(String message)
+void LoadMedia(Channel MediaChannel, String contentId, String contentType, String title, String imageUrl, bool autoplay = false, float currentTime = 0.0, String repeatMode = "REPEAT_OFF") {
+
+  StaticJsonDocument<600> mediaDoc;
+  mediaDoc["contentId"] = contentId.c_str();
+  mediaDoc["contentType"] = contentType.c_str();
+  mediaDoc["streamType"] = "BUFFERED";
+  JsonObject metadata = mediaDoc.createNestedObject("metadata");
+  metadata["type"] = 0;
+  metadata["metadataType"] = 0;
+  metadata["title"] = title.c_str();
+  JsonArray images = metadata.createNestedArray("images");
+  JsonObject image1 = images.createNestedObject();
+  image1["url"] = imageUrl.c_str();
+
+  StaticJsonDocument<700> loadDoc;
+  loadDoc["type"] = "LOAD";
+  loadDoc["autoplay"] = autoplay;
+  loadDoc["currentTime"] = currentTime;
+  loadDoc["repeatMode"] = repeatMode.c_str();
+  loadDoc["media"] = mediaDoc;
+  loadDoc["requestId"] = 1;
+
+  String loadString;
+  serializeJson(loadDoc, loadString);
+  MediaChannel.send(loadString);
+}
+
+
+void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
 {
-  Serial.println(message.c_str());
+  Serial.println(Data.c_str());
+
+  if (!Session.isEmpty())
+  {
+    Channel ConnectChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.cast.tp.connection", "JSON");
+    Channel MediaChannel(SSLClient, "sender-0",  Session, "urn:x-cast:com.google.cast.media", "JSON");
+
+    StaticJsonDocument<200> doc1;
+
+    doc1["type"] = "CONNECT";
+
+    String CONNECTSTRING;
+    serializeJson(doc1, CONNECTSTRING);
+
+    ConnectChannel.send(CONNECTSTRING);
+
+    LoadMedia(MediaChannel, "https://cdn.discordapp.com/attachments/1044679579509461003/1150983763984121966/h.mp4", "video/mp4", "AH", "https://cdn.discordapp.com/attachments/1044679579509461003/1150951024899657829/image.png", true);
+
+  }
+
 }
 
 ESPmDNSHelper::~ESPmDNSHelper() {
@@ -23,7 +70,7 @@ bool ESPmDNSHelper::initialize(const char* hostName) {
         return true;
     }
     return false;
-}
+} 
 
 void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, uint32_t timeout) {
     int n = mdns->queryService(serviceType, proto);
@@ -39,14 +86,14 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
             Serial.println("Service IP: " + serviceIP.toString());
             Serial.println("Service Port: " + String(servicePort));
             Serial.println("----------------------------");
-            if (i == 1)
-            {
-              if (initializeClient(serviceIP.toString().c_str(), servicePort))
-              {
-                SendAuth();
-              }
-            }
             
+          if (serviceIP.toString() == "192.168.1.189")
+          {
+            if (initializeClient(serviceIP.toString().c_str(), servicePort))
+            {
+              SendAuth();
+            }
+          }
         }
     }
     delay(timeout);
@@ -72,10 +119,13 @@ void ESPmDNSHelper::SendAuth()
   Channel ConnectChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection", "JSON");
   Channel HeartBeat(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat", "JSON");
   Channel RecieverChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.receiver", "JSON");
+  Channel MediaChannel(SSLClient, "sender-0",  "receiver-0", "urn:x-cast:com.google.cast.media", "JSON");
+
 
   RecieverChannel.setMessageCallback(HandleMessage);
   HeartBeat.setMessageCallback(HandleMessage);
   ConnectChannel.setMessageCallback(HandleMessage);
+  MediaChannel.setMessageCallback(HandleMessage);
 
 
   StaticJsonDocument<200> Heartbeatdoc;
@@ -95,24 +145,22 @@ void ESPmDNSHelper::SendAuth()
 
   ConnectChannel.send(CONNECTSTRING);
 
+
+  HeartBeat.send(HeartBeatString);
+
   StaticJsonDocument<200> doc2;
-
-  // Populate the JSON object
   doc2["type"] = "LAUNCH";
-  doc2["appId"] = "YouTube";
-  doc2["requestId"] = "1";
-
-  // Convert JSON object to String
+  doc2["appId"] = "CC1AD845";
+  doc2["requestId"] = 1;
   String LaunchString;
   serializeJson(doc2, LaunchString);
-
   RecieverChannel.send(LaunchString);
 
   unsigned long startTime = millis();
-  while (millis() - startTime < 5000) {  // Loop for 5 seconds
+  while (millis() - startTime < 15000) {
     RecieverChannel.checkForMessages();
-    HeartBeat.send(HeartBeatString);
-    delay(1000);  // Short delay to prevent excessive CPU usage
+      HeartBeat.send(HeartBeatString);
+    delay(1000);
   }
 
   Serial.println("Finished checking for messages.");
@@ -129,13 +177,17 @@ bool ESPmDNSHelper::initializeClient(const char* _host, uint16_t _port)
 
   SSLClient.allowSelfSignedCerts();
 
+  SSLClient.setDebugLevel(4);
+
   if (SSLClient.connect(host.c_str(), port)) {
 
     Serial.println("Connected");
 
-    return true;
+    SSLClient.setInsecure();
 
-   
+    SSLClient.connectSSL();
+
+    return true;
   } else {
       Serial.println("Failed to connect securely. Entirely");
       return false;
