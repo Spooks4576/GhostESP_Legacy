@@ -14,7 +14,6 @@
     #error "This code is intended for ESP32 only!"
 #endif
 
-
 struct Devices
 {
   String HostName;
@@ -46,6 +45,8 @@ public:
     void sendMessageToChromecast(const char* hexData);
 
     void CheckMessageLoop();
+
+    void HandleMessage(String Session, String Data);
 private:
     MDNSResponder* mdns;
     std::vector<Devices> NetDevices;

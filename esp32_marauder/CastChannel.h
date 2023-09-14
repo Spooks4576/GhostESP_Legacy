@@ -3,13 +3,14 @@
 #include <WiFiClientSecure.h>
 #include <ESP_SSLClient.h>
 #include <ArduinoJson.h>
+#include "CastSerializer.h"
 #include <ArduinoHttpClient.h>
+#include <functional>
 
 #define MAX_BUFFER_SIZE 1024
 
-
 int threshold = 50;
-
+const uint8_t MAX_STRING_SIZE = 100;
 
 byte hexCharToByte(char c) {
   if (c >= '0' && c <= '9') return c - '0';
@@ -18,22 +19,20 @@ byte hexCharToByte(char c) {
   return 0;
 }
 
-String findNestedKey(JsonVariant var, const char* targetKey) {
-    if (var.is<JsonObject>()) {
-        for (JsonPair kv : var.as<JsonObject>()) {
-            if (strcmp(kv.key().c_str(), targetKey) == 0) {
-                return kv.value().as<String>();
-            }
-            String found = findNestedKey(kv.value(), targetKey);
-            if (found != "") return found;
-        }
-    } else if (var.is<JsonArray>()) {
-        for (JsonVariant value : var.as<JsonArray>()) {
-            String found = findNestedKey(value, targetKey);
-            if (found != "") return found;
-        }
-    }
-    return "";  // Not found
+bool isValidSessionId(const String& sessionId) {
+  // Check if the sessionId is in the UUID format
+  // e.g., 550e8400-e29b-41d4-a716-446655440000
+  return (sessionId.length() == 36) && (sessionId[8] == '-') && (sessionId[13] == '-') && (sessionId[18] == '-') && (sessionId[23] == '-');
+}
+
+String bufferToHexString(const uint8_t* buffer, uint16_t length) {
+  String result = "";
+  for (uint16_t i = 0; i < length; i++) {
+    char hex[3];  // Two characters for the byte and one for the null terminator
+    sprintf(hex, "%02X", buffer[i]);
+    result += hex;
+  }
+  return result;
 }
 
 
@@ -47,6 +46,17 @@ void hexStringToBytes(const String& hex, byte* buffer, int bufferSize) {
   }
 }
 
+uint16_t hexStringToBytes_U(const String& hexString, uint8_t* buffer, uint16_t bufferSize) {
+  uint16_t byteCount = 0;
+  for (uint16_t i = 0; i < hexString.length() && byteCount < bufferSize; i += 2) {
+    char c1 = hexString[i];
+    char c2 = hexString[i + 1];
+    buffer[byteCount] = (hexCharToByte(c1) << 4) | hexCharToByte(c2);
+    byteCount++;
+  }
+  return byteCount;
+}
+
 class Channel {
 private:
   BSSL_TCP_Client& client;
@@ -55,107 +65,64 @@ private:
   String destinationId;
   String namespace_;
   String encoding;
-  void (*messageCallback)(BSSL_TCP_Client, String, String);
+  std::function<void(String, String)> messageCallback;
 
 public:
   Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "")
     : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), messageCallback(nullptr) {}
 
-  void setMessageCallback(void (*callback)(BSSL_TCP_Client, String, String)) {
-    messageCallback = callback;
+  void setMessageCallback(std::function<void(String, String)> callback) {
+        messageCallback = callback;
   }
 
   String Deserialize_Internal(String serializedData) {
-    const char* serverAddress = "144.48.106.204";  // Your server address
-    const int port = 5000;
-    const char* endpoint = "/protobuf/deserialize";
+    uint8_t* buffer = new uint8_t[1000];
+    uint16_t byteCount = hexStringToBytes_U(serializedData, buffer, 1000);
 
-    HttpClient httpc(unsecureclient, serverAddress, port);
-    httpc.beginRequest();
-    httpc.post(endpoint);
+    char* payloadUtf8 = new char[1000];
+    ExpandedCastMessageSerializer::DeserializationResult result = ExpandedCastMessageSerializer::deserialize(buffer, byteCount, payloadUtf8);
 
-    httpc.sendHeader("User-Agent", "ESP32");
-    httpc.sendHeader("Content-Type", "text/plain");
-    httpc.sendHeader("Content-Length", serializedData.length());
-
-    httpc.beginBody();
-    httpc.print(serializedData);
-    httpc.endRequest();
-
-    int responseCode = httpc.responseStatusCode();
-    String responseBody = httpc.responseBody();
-
-    if (responseCode == 200) {
-      Serial.println("Successfully Decoded");
-      return responseBody;
+    String returnString = "";
+    if (result == ExpandedCastMessageSerializer::DESERIALIZATION_SUCCESS) {
+      returnString = String(payloadUtf8);
     } else {
-      Serial.printf("Failed! Got a Response Code of %i\n", responseCode);
-      return "";
+      Serial.println("Failed to Deserialize");
     }
+
+    delete[] buffer;
+    delete[] payloadUtf8;
+
+    return returnString;
   }
 
 
+
   String Seralize_Internal(String Data) {
-    const char* serverAddress = "144.48.106.204";  // Requires a custom server to handle request
-    const int port = 5000;
-    const char* endpoint = "/protobuf/serialize";
 
-    HttpClient httpc(unsecureclient, serverAddress, port);
-    httpc.beginRequest();
-    httpc.post(endpoint);
+    ExpandedCastMessageSerializer::CastMessage message;
+    message.protocol_version = ExpandedCastMessageSerializer::CASTV2_1_0;
+    strncpy(message.source_id, sourceId.c_str(), MAX_STRING_SIZE - 1);
+    message.source_id[MAX_STRING_SIZE - 1] = '\0';  // Ensure null-termination
+    strncpy(message.destination_id, destinationId.c_str(), MAX_STRING_SIZE - 1);
+    message.destination_id[MAX_STRING_SIZE - 1] = '\0';  // Ensure null-termination
+    strncpy(message.namespace_, namespace_.c_str(), MAX_STRING_SIZE - 1);
+    message.namespace_[MAX_STRING_SIZE - 1] = '\0';  // Ensure null-termination
+    strncpy(message.payload_utf8, Data.c_str(), 500 - 1);
+    message.payload_utf8[500 - 1] = '\0';  // Ensure null-termination
+    message.payload_type = ExpandedCastMessageSerializer::STRING;
+    memset(message.payload_binary, 0, 100);
+    message.payload_binary_size = 0;
 
-    String typeValue = "CONNECT";
-    String userAgentValue = "GND/0.90.5  (X11; Linux x86_64)";
+    uint8_t buffer[1000];
+    uint16_t index = 0;
+    ExpandedCastMessageSerializer::SerializationResult result = ExpandedCastMessageSerializer::serialize(message, buffer, index, sizeof(buffer));
 
+    if (result == ExpandedCastMessageSerializer::SUCCESS) {
 
-    StaticJsonDocument<800> docs;
-
-
-    docs["source_id"] = sourceId;
-    docs["destination_id"] = destinationId;
-    docs["namespace_"] = namespace_;
-    docs["payload_type"] = 0;
-
-
-    DynamicJsonDocument payloadDoc(1024);
-    deserializeJson(payloadDoc, Data);
-
-    docs["payload_utf8"] = payloadDoc;
-
-
-    String jsonString;
-    serializeJson(docs, jsonString);
-
-    Serial.println(jsonString);
-
-    httpc.sendHeader("User-Agent", "ESP32");
-    httpc.sendHeader("Content-Type", "application/json");
-    httpc.sendHeader("Content-Length", jsonString.length());
-
-    httpc.beginBody();
-    httpc.print(jsonString);
-    httpc.endRequest();
-
-    int responseCode = httpc.responseStatusCode();
-    String responseBody = httpc.responseBody();
-
-    DynamicJsonDocument doc(600);
-    deserializeJson(doc, responseBody);
-
-    if (responseCode == 200) {
-      if (doc.containsKey("protobuf")) {
-        String serialized_base64 = doc["protobuf"].as<String>();
-
-        return serialized_base64;
-      } else if (doc.containsKey("error")) {
-        Serial.printf("Server Error: %s\n", doc["error"].as<String>().c_str());
-        return "";
-      }
-    } else if (doc.containsKey("error")) {
-      Serial.printf("Server Error: %s\n", doc["error"].as<String>().c_str());
-      return "";
+      String hex = bufferToHexString(buffer, index);
+      return hex;
     } else {
-      Serial.printf("Failed! Got a Response Code of %i\n", responseCode);
+      Serial.println("Serialization Error Occured");
       return "";
     }
   }
@@ -191,17 +158,13 @@ public:
 
 
   void onMessage(String srcId, String destId, String ns, String data) {
-
-    DynamicJsonDocument doc(500);
-    deserializeJson(doc, data);
-
-    // Check if the "sessionId" key exists
-    String deviceId = findNestedKey(doc.as<JsonVariant>(), "deviceId");
-    if (deviceId != "") {
-        Serial.println("Device ID: " + deviceId);
-        messageCallback(client, deviceId, data);
+    if (data != "" && isValidSessionId(data)) {
+      Serial.println("Session ID: " + data);
+      messageCallback(data, data);
+    } else if (data != "") {
+      Serial.println("Other valid data received: " + data);
     } else {
-        Serial.println("deviceId not found in nested JSON");
+      Serial.println("deviceId not found in nested JSON");
     }
   }
 
@@ -220,25 +183,5 @@ public:
     hexStringToBytes(serializedData, buffer + 4, dataLength);
 
     client.write(buffer, sizeof(buffer));
-  }
-
-  String encode(String data) {
-    if (encoding == "JSON") {
-      DynamicJsonDocument doc(1024);
-      doc["data"] = data;
-      String result;
-      serializeJson(doc, result);
-      return result;
-    }
-    return data;
-  }
-
-  String decode(String data) {
-    if (encoding == "JSON") {
-      DynamicJsonDocument doc(1024);
-      deserializeJson(doc, data);
-      return doc["data"].as<String>();
-    }
-    return data;
   }
 };

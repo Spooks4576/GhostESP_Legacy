@@ -29,14 +29,16 @@ void LoadMedia(Channel MediaChannel, String contentId, String contentType, Strin
   loadDoc["repeatMode"] = repeatMode.c_str();
   loadDoc["media"] = mediaDoc;
   loadDoc["requestId"] = 1;
+  loadDoc.createNestedArray("activeTrackIds");
 
   String loadString;
   serializeJson(loadDoc, loadString);
+  Serial.println(loadString);
   MediaChannel.send(loadString);
 }
 
 
-void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
+void ESPmDNSHelper::HandleMessage(String Session, String Data)
 {
   if (!Session.isEmpty())
   {
@@ -49,15 +51,11 @@ void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
 
     String CONNECTSTRING;
     serializeJson(doc1, CONNECTSTRING);
-
+    
     ConnectChannel.send(CONNECTSTRING);
 
-    delay(1500);
-
     LoadMedia(MediaChannel, "https://cdn.discordapp.com/attachments/1044679579509461003/1150983763984121966/h.mp4", "video/mp4", "AH", "https://cdn.discordapp.com/attachments/1044679579509461003/1150951024899657829/image.png", true);
-
   }
-
 }
 
 ESPmDNSHelper::~ESPmDNSHelper() {
@@ -118,14 +116,10 @@ void ESPmDNSHelper::SendAuth()
   Channel ConnectChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection", "JSON");
   Channel HeartBeat(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat", "JSON");
   Channel RecieverChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.receiver", "JSON");
-  Channel MediaChannel(SSLClient, "sender-0",  "receiver-0", "urn:x-cast:com.google.cast.media", "JSON");
 
-
-  RecieverChannel.setMessageCallback(HandleMessage);
-  HeartBeat.setMessageCallback(HandleMessage);
-  ConnectChannel.setMessageCallback(HandleMessage);
-  MediaChannel.setMessageCallback(HandleMessage);
-
+  RecieverChannel.setMessageCallback([this](String arg1, String arg2) {
+    this->HandleMessage(arg1, arg2);
+  });
 
   StaticJsonDocument<200> Heartbeatdoc;
 
