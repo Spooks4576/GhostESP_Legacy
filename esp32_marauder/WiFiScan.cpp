@@ -9,7 +9,7 @@ LinkedList<ssid>* ssids;
 LinkedList<AccessPoint>* access_points;
 LinkedList<Station>* stations;
 
-extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
+extern "C" int ieee80211_raw_frame_sanity_check_C(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
     else
@@ -126,7 +126,7 @@ WiFiScan::WiFiScan()
 }
 
 void WiFiScan::RunSetup() {
-  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
+  if (ieee80211_raw_frame_sanity_check_C(31337, 0, 0) == 1)
     this->wsl_bypass_enabled = true;
   else
     this->wsl_bypass_enabled = false;

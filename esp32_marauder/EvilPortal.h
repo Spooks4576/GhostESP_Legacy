@@ -37,8 +37,8 @@ extern Buffer buffer_obj;
 #define MAX_AP_NAME_SIZE 30
 #define WIFI_SCAN_EVIL_PORTAL 30
 
-char apName[MAX_AP_NAME_SIZE] = "PORTAL";
-char index_html[MAX_HTML_SIZE] = "TEST";
+inline char apName_C[MAX_AP_NAME_SIZE] = "PORTAL";
+inline char index_html_C[MAX_HTML_SIZE] = "TEST";
 
 struct ssid {
   String essid;
@@ -65,7 +65,7 @@ public:
   bool canHandle(AsyncWebServerRequest *request) { return true; }
 
   void handleRequest(AsyncWebServerRequest *request) {
-    request->send_P(200, "text/html", index_html);
+    request->send_P(200, "text/html", index_html_C);
   }
 };
 

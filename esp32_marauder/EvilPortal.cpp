@@ -31,7 +31,7 @@ String EvilPortal::get_password() {
 
 void EvilPortal::setupServer() {
   server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    request->send_P(200, "text/html", index_html);
+    request->send_P(200, "text/html", index_html_C);
     Serial.println("client connected");
     #ifdef HAS_SCREEN
       this->sendToDisplay("Client connected to server");
@@ -90,7 +90,7 @@ bool EvilPortal::setHtml() {
         if (isPrintable(c))
           html.concat(c);
       }
-      strncpy(index_html, html.c_str(), strlen(html.c_str()));
+      strncpy(index_html_C, html.c_str(), strlen(html.c_str()));
       this->has_html = true;
       Serial.println("html set");
       html_file.close();
@@ -203,7 +203,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   }
 
   if (ap_config != "") {
-    strncpy(apName, ap_config.c_str(), strlen(ap_config.c_str()));
+    strncpy(apName_C, ap_config.c_str(), strlen(ap_config.c_str()));
     this->has_ap = true;
     Serial.println("ap config set");
     return true;
@@ -215,10 +215,10 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
 
 void EvilPortal::startAP() {
   Serial.print("starting ap ");
-  Serial.println(apName);
+  Serial.println(apName_C);
 
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(apName);
+  WiFi.softAP(apName_C);
 
   #ifdef HAS_SCREEN
     this->sendToDisplay("AP started");

@@ -38,8 +38,6 @@ void LoadMedia(Channel MediaChannel, String contentId, String contentType, Strin
 
 void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
 {
-  Serial.println(Data.c_str());
-
   if (!Session.isEmpty())
   {
     Channel ConnectChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.cast.tp.connection", "JSON");
@@ -54,6 +52,8 @@ void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
 
     ConnectChannel.send(CONNECTSTRING);
 
+    delay(1500);
+
     LoadMedia(MediaChannel, "https://cdn.discordapp.com/attachments/1044679579509461003/1150983763984121966/h.mp4", "video/mp4", "AH", "https://cdn.discordapp.com/attachments/1044679579509461003/1150951024899657829/image.png", true);
 
   }
@@ -61,7 +61,6 @@ void HandleMessage(BSSL_TCP_Client SSLClient, String Session, String Data)
 }
 
 ESPmDNSHelper::~ESPmDNSHelper() {
-    delete mdns;
 }
 
 bool ESPmDNSHelper::initialize(const char* hostName) {
@@ -87,7 +86,7 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
             Serial.println("Service Port: " + String(servicePort));
             Serial.println("----------------------------");
             
-          if (serviceIP.toString() == "192.168.1.189")
+          if (serviceIP.toString() == "192.168.1.165")
           {
             if (initializeClient(serviceIP.toString().c_str(), servicePort))
             {
@@ -157,7 +156,7 @@ void ESPmDNSHelper::SendAuth()
   RecieverChannel.send(LaunchString);
 
   unsigned long startTime = millis();
-  while (millis() - startTime < 15000) {
+  while (millis() - startTime < 20000) {
     RecieverChannel.checkForMessages();
       HeartBeat.send(HeartBeatString);
     delay(1000);
