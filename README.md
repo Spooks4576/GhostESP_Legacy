@@ -1,6 +1,6 @@
 # GhostESP
 
-A Firmware for the ESP32 targeted at Flipper Devices. Based off of the Marauder Firmware.
+A Firmware for the ESP32 targeted for use with Flipper Devices. Based off of the Marauder Firmware.
 
 ![GhostESP Logo](path_to_your_logo.png)
 
