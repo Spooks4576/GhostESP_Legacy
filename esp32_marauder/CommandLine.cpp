@@ -1126,6 +1126,6 @@ void CommandLine::runCommand(String input) {
 
 
 
-    ESPmDNSHelper* DNSHelper = new ESPmDNSHelper(essid.c_str(), pwx.c_str());
+    ESPmDNSHelper* DNSHelper = new ESPmDNSHelper(essid.c_str(), pwx.c_str(), Target != "" ? Target.c_str() : "", url != "" ? url.c_str() : "");
   }
 }

@@ -23,7 +23,7 @@ struct Devices
 
 class ESPmDNSHelper {
 public:
-    ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target = nullptr, const char* url = nullptr);
+    ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target = "", const char* url = "");
     ~ESPmDNSHelper();
 
     WiFiClient unsecureclient;

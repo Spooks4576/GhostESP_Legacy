@@ -5,14 +5,22 @@ ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const c
     mdns = new MDNSResponder();
     ssid = inSsid;
     password = inpaSsword;
-    if (Target)
+    if (Target != "")
     {
       TargetIP = Target;
     }
+    else 
+    {
+      TargetIP = "";
+    }
 
-    if (url)
+    if (url != "")
     {
       TargetURL = url;
+    }
+    else 
+    {
+      TargetURL = "";
     }
 
     connectWiFi();
@@ -101,7 +109,7 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
             Serial.println("Service Port: " + String(servicePort));
             Serial.println("----------------------------");
             
-          if (TargetIP != nullptr)
+          if (TargetIP != "")
           {
             if (initializeClient(TargetIP, servicePort))
             {
@@ -186,7 +194,17 @@ void ESPmDNSHelper::SendAuth()
 
   RecieverChannel.send(VolumeString);
 
-  RecieverChannel.YTUrl = String(TargetURL);
+
+  if (TargetURL != "")
+  {
+    RecieverChannel.YTUrl = String(TargetURL);
+  }
+  else 
+  {
+    RecieverChannel.YTUrl = "dQw4w9WgXcQ";
+  }
+
+ 
 
   unsigned long startTime = millis();
   while (SSLClient) {
