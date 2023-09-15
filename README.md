@@ -2,8 +2,7 @@
 
 A Firmware for the ESP32 targeted at Flipper Devices. Based off of the Marauder Firmware.
 
-![GhostESP Logo](path_to_your_logo.png) 
-*You can replace the path with the actual link to your logo or remove this line if you don't have one.*
+![GhostESP Logo](path_to_your_logo.png)
 
 ## Features
 
