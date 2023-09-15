@@ -1,10 +1,20 @@
 #include "ESPmDNSHelper.h"
 #include "CastChannel.h"
 
-ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword) {
+ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target, const char* url) {
     mdns = new MDNSResponder();
     ssid = inSsid;
     password = inpaSsword;
+    if (Target)
+    {
+      TargetIP = Target;
+    }
+
+    if (url)
+    {
+      TargetURL = url;
+    }
+
     connectWiFi();
 }
 
@@ -43,7 +53,7 @@ void ESPmDNSHelper::HandleMessage(String Session, String Data)
   if (!Session.isEmpty())
   {
     Channel ConnectChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.cast.tp.connection", "JSON");
-    Channel MediaChannel(SSLClient, "sender-0",  Session, "urn:x-cast:com.google.cast.media", "JSON");
+    Channel MediaChannel(SSLClient, "sender-0",  Session, "urn:x-cast:com.google.youtube.mdx", "JSON");
 
     StaticJsonDocument<200> doc1;
 
@@ -54,7 +64,14 @@ void ESPmDNSHelper::HandleMessage(String Session, String Data)
     
     ConnectChannel.send(CONNECTSTRING);
 
-    LoadMedia(MediaChannel, "https://cdn.discordapp.com/attachments/1044679579509461003/1150983763984121966/h.mp4", "video/mp4", "AH", "https://cdn.discordapp.com/attachments/1044679579509461003/1150951024899657829/image.png", true);
+
+    StaticJsonDocument<200> doc2;
+    String CONNECTSTRING2;
+    doc2["type"] = "getMdxSessionStatus";
+    serializeJson(doc2, CONNECTSTRING2);
+
+    MediaChannel.send(CONNECTSTRING2);
+
   }
 }
 
@@ -84,7 +101,15 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
             Serial.println("Service Port: " + String(servicePort));
             Serial.println("----------------------------");
             
-          if (serviceIP.toString() == "192.168.1.165")
+          if (TargetIP != nullptr)
+          {
+            if (initializeClient(TargetIP, servicePort))
+            {
+              SendAuth();
+              break;
+            }
+          }
+          else 
           {
             if (initializeClient(serviceIP.toString().c_str(), servicePort))
             {
@@ -143,16 +168,30 @@ void ESPmDNSHelper::SendAuth()
 
   StaticJsonDocument<200> doc2;
   doc2["type"] = "LAUNCH";
-  doc2["appId"] = "CC1AD845";
+  doc2["appId"] = "233637DE";
   doc2["requestId"] = 1;
   String LaunchString;
   serializeJson(doc2, LaunchString);
   RecieverChannel.send(LaunchString);
 
+  StaticJsonDocument<200> doc3;
+  doc3["type"] = "SET_VOLUME";
+  JsonObject volume = doc3.createNestedObject("volume");
+
+  
+  volume["level"] = 1;
+
+  String VolumeString;
+  serializeJson(doc3, VolumeString);
+
+  RecieverChannel.send(VolumeString);
+
+  RecieverChannel.YTUrl = String(TargetURL);
+
   unsigned long startTime = millis();
-  while (millis() - startTime < 20000) {
+  while (SSLClient) {
     RecieverChannel.checkForMessages();
-      HeartBeat.send(HeartBeatString);
+    HeartBeat.send(HeartBeatString);
     delay(1000);
   }
 

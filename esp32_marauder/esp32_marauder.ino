@@ -7,6 +7,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "configs.h"
 
+#define DEBUG_ESP_SSL
+#define DEBUG_ESP_PORT Serial
+
 #define WRITE_PACKETS_SERIAL
 
 #ifndef HAS_SCREEN

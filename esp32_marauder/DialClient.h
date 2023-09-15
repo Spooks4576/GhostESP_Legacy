@@ -125,6 +125,7 @@ public:
     }
 
     DIALClient(String& ssid, String& password, String& App, String& YTUrl);
+    DIALClient();
     ~DIALClient();
     void connectWiFi();
     void Execute();

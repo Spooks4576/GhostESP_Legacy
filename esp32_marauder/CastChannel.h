@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include "CastSerializer.h"
 #include <ArduinoHttpClient.h>
+#include "DialClient.h"
 #include <functional>
 
 #define MAX_BUFFER_SIZE 1024
@@ -61,18 +62,272 @@ class Channel {
 private:
   BSSL_TCP_Client& client;
   WiFiClient unsecureclient;
+  WiFiClientSecure secureClient;
   String sourceId;
   String destinationId;
   String namespace_;
   String encoding;
+  RID rid;
   std::function<void(String, String)> messageCallback;
 
 public:
+  String YTUrl;
   Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "")
     : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), messageCallback(nullptr) {}
 
+
+  String zx() {
+    String result = "";
+    const char* characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const int charactersLength = strlen(characters);
+    const int stringLength = 12;
+
+    for (int i = 0; i < stringLength; i++) {
+      char randomChar = characters[random(0, charactersLength)];
+      result += randomChar;
+    }
+
+    return result;
+  }
+
+  String extractJSON(const String& response) {
+    // Find the start of the JSON content (assuming it always starts with '[')
+    int startIndex = response.indexOf("[[");
+    if (startIndex == -1) return "";  // JSON not found
+
+    // Find the end of the JSON content
+    int endIndex = response.lastIndexOf("]");
+
+    // Extract the JSON
+    return response.substring(startIndex, endIndex + 1);
+  }
+
+
+  String generateUUID() {
+    String uuid = "";
+
+    randomSeed(analogRead(0) + millis());
+
+    for (int i = 0; i < 4; i++) {
+      uuid += String(random(0xFFFFFFF), HEX);
+    }
+
+    return uuid;
+  }
+
+  void BindSessionID(DIALClient::Device& Device) {
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/bc/bind";
+
+
+    if (!secureClient.connect(serverAddress, port)) {
+      Serial.println("Connection failed!");
+      return;
+    }
+
+    Device.UUID = generateUUID();
+
+
+    String urlParams = "device=REMOTE_CONTROL";
+    urlParams += "&mdx-version=3";
+    urlParams += "&ui=1";
+    urlParams += "&v=2";
+    urlParams += "&name=Flipper_0";
+    urlParams += "&app=youtube-desktop";
+    urlParams += "&loungeIdToken=" + Device.YoutubeToken;
+    urlParams += "&id=" + Device.UUID;
+    urlParams += "&VER=8";
+    urlParams += "&CVER=1";
+    urlParams += "&zx=" + zx();
+    urlParams += "&RID=" + String(rid.next());
+
+
+    String jsonData = "{count: 0 }";
+
+    Serial.println(String(endpoint) + "?" + urlParams);
+
+
+    secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
+    secureClient.print("Host: " + String(serverAddress) + "\r\n");
+    secureClient.print("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n");
+    secureClient.print("Content-Type: application/json\r\n");
+    secureClient.print("Content-Length: " + String(jsonData.length()) + "\r\n");
+    secureClient.print("Origin: https://www.youtube.com\r\n");
+    secureClient.print("\r\n");
+    secureClient.print(jsonData);
+
+
+    while (!secureClient.available()) {
+      delay(10);
+    }
+
+
+    String response = secureClient.readString();
+
+    DynamicJsonDocument doc(4096);
+    Serial.println(extractJSON(response));
+    DeserializationError error = deserializeJson(doc, extractJSON(response));
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.c_str());
+      return;
+    }
+
+    JsonArray array = doc.as<JsonArray>();
+    String gsession;
+    String SID;
+    String LID;
+
+    for (JsonVariant v : array) {
+      if (v[0].as<int>() == 0 && v[1][0].as<String>() == "c") {
+        SID = v[1][1].as<String>();
+      }
+      if (v[0].as<int>() == 1 && v[1][0].as<String>() == "S") {
+        gsession = v[1][1].as<String>();
+      }
+      if (v[0].as<int>() == 3 && v[1][0].as<String>() == "playlistModified") {
+        LID = v[1][1]["listId"].as<String>();
+      }
+    }
+
+    Serial.println("gsession: " + gsession);
+    Serial.println("SID: " + SID);
+
+    Device.gsession = gsession;
+    Device.SID = SID;
+    Device.listID = LID;
+
+    secureClient.stop();
+  }
+
+  void sendYouTubeCommand(const String& command, const String& videoId, const DIALClient::Device& device) {
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/bc/bind";
+
+
+    if (!secureClient.connect(serverAddress, port)) {
+      Serial.println("Connection failed!");
+      return;
+    }
+
+    String urlParams = "device=REMOTE_CONTROL";
+    urlParams += "&loungeIdToken=" + device.YoutubeToken;
+    urlParams += "&id=" + device.UUID;
+    urlParams += "&VER=8";
+    urlParams += "&zx=" + zx();
+    urlParams += "&SID=" + device.SID;
+    urlParams += "&RID=" + String(rid.next());
+    urlParams += "&AID=" + String("5");
+    urlParams += "&gsessionid=" + device.gsession;
+
+
+    Serial.println(String(endpoint) + "?" + urlParams);
+
+    String formData;
+    formData += "count=1";
+    formData += "&ofs=0";
+    formData += "&req0__sc=" + command;
+    formData += "&req0_videoId=" + videoId;
+    formData += "&req0_listId=" + device.listID;
+
+    Serial.println(formData);
+
+    secureClient.print("POST " + String(endpoint) + "?" + urlParams + " HTTP/1.1\r\n");
+    secureClient.print("Host: " + String(serverAddress) + "\r\n");
+    secureClient.print("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n");
+    secureClient.print("Content-Type: application/x-www-form-urlencoded\r\n");
+    secureClient.print("Content-Length: " + String(formData.length()) + "\r\n");
+    secureClient.print("Origin: https://www.youtube.com\r\n");
+    secureClient.print("\r\n");
+    secureClient.print(formData);
+
+
+    while (!secureClient.available()) {
+      delay(10);
+    }
+
+
+    String response = secureClient.readString();
+    Serial.println("Set playlist Response");
+    Serial.println(response);
+  }
+
+  String getYouTubeToken(const String& screenId) {
+    secureClient.setInsecure();
+    const char* serverAddress = "www.youtube.com";
+    const int port = 443;
+    const char* endpoint = "/api/lounge/pairing/get_lounge_token_batch";
+
+    if (secureClient.connect(serverAddress, port)) {
+      Serial.println("Connected to server.");
+
+
+      String postData = "screen_ids=" + screenId;
+      secureClient.print("POST " + String(endpoint) + " HTTP/1.1\r\n");
+      secureClient.print("Host: " + String(serverAddress) + "\r\n");
+      secureClient.print("User-Agent: ESP32\r\n");
+      secureClient.print("Content-Type: application/x-www-form-urlencoded\r\n");
+      secureClient.print("Content-Length: " + String(postData.length()) + "\r\n");
+      secureClient.print("\r\n");
+      secureClient.print(postData);
+
+
+      while (!secureClient.available()) {
+        delay(10);
+      }
+
+
+      String entireResponse = secureClient.readString();
+
+
+      int firstNewline = entireResponse.indexOf('\n');
+      String statusLine = entireResponse.substring(0, firstNewline);
+      int statusCode = statusLine.substring(9, 12).toInt();
+      Serial.println("YouTube API response status: " + String(statusCode));
+
+      String responseBody = "";
+
+
+      int endOfHeaders = entireResponse.indexOf("\n\r\n");
+      if (endOfHeaders != -1) {
+        responseBody = entireResponse.substring(endOfHeaders + 3);
+        Serial.println("YouTube API response content: " + responseBody);
+      } else {
+        Serial.println("Failed to parse response headers.");
+      }
+
+
+      int startOfJson = responseBody.indexOf('{');
+      if (startOfJson != -1) {
+        responseBody = responseBody.substring(startOfJson);
+      } else {
+        Serial.println("Failed to find start of JSON content.");
+        return "";
+      }
+
+      if (statusCode == 200) {
+
+        DynamicJsonDocument doc(1024);
+        deserializeJson(doc, responseBody);
+        String loungeToken = doc["screens"][0]["loungeToken"].as<String>();
+        Serial.println("Lounge Token: " + loungeToken);
+        secureClient.stop();
+        return loungeToken;
+      } else {
+        Serial.println("Failed to retrieve token. HTTP Response Code: " + String(statusCode));
+        return "";
+      }
+    } else {
+      Serial.println("Failed to connect to server.");
+      return "";
+    }
+  }
+
   void setMessageCallback(std::function<void(String, String)> callback) {
-        messageCallback = callback;
+    messageCallback = callback;
   }
 
   String Deserialize_Internal(String serializedData) {
@@ -112,6 +367,8 @@ public:
     message.payload_type = ExpandedCastMessageSerializer::STRING;
     memset(message.payload_binary, 0, 100);
     message.payload_binary_size = 0;
+
+    Serial.println("Input Data length: " + String(Data.length()));
 
     uint8_t buffer[1000];
     uint16_t index = 0;
@@ -158,11 +415,42 @@ public:
 
 
   void onMessage(String srcId, String destId, String ns, String data) {
+    // Check if the data is a valid session ID first
     if (data != "" && isValidSessionId(data)) {
       Serial.println("Session ID: " + data);
       messageCallback(data, data);
-    } else if (data != "") {
-      Serial.println("Other valid data received: " + data);
+    }
+
+    else if (data != "") {
+      // Parse the JSON data
+      DynamicJsonDocument doc(700);
+      DeserializationError error = deserializeJson(doc, data);
+
+
+      if (!error && doc["data"].containsKey("screenId")) {
+        String screenId = doc["data"]["screenId"].as<String>();
+        Serial.println("Found screenId: " + screenId);
+        DIALClient::Device ccdevice;
+        ccdevice.screenID = screenId;
+        client.stop();
+        secureClient.setInsecure();
+        String YTToken = getYouTubeToken(screenId);
+        ccdevice.YoutubeToken = YTToken;
+        BindSessionID(ccdevice);
+
+        if (YTUrl.isEmpty())
+        {
+          sendYouTubeCommand("setPlaylist", "dQw4w9WgXcQ", ccdevice);
+        }
+        else 
+        {
+          sendYouTubeCommand("setPlaylist", YTUrl.c_str(), ccdevice);
+        }
+
+        
+      } else {
+        Serial.println("Other valid data received: " + data);
+      }
     } else {
       Serial.println("deviceId not found in nested JSON");
     }

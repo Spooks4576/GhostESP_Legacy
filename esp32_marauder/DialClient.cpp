@@ -1,6 +1,7 @@
 #include "DIALClient.h"
 
 DIALClient::DIALClient(String& ssid, String& password, String& app, String& YTUrl) : ssid(ssid), password(password), App(app), YTUrl(YTUrl){}
+DIALClient::DIALClient() {}
 
 String extractMAC(const String& str) {
     int startIndex = str.indexOf("MAC=") + 4;
@@ -509,6 +510,7 @@ void DIALClient::sendYouTubeCommand(const String& command, const String& videoId
 }
 
 String DIALClient::getYouTubeToken(const String& screenId) {
+    secureClient.setInsecure();
     const char* serverAddress = "www.youtube.com";
     const int port = 443;
     const char* endpoint = "/api/lounge/pairing/get_lounge_token_batch";

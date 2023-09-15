@@ -32,7 +32,7 @@ struct CastMessage {
   char destination_id[MAX_STRING_SIZE];
   char namespace_[MAX_STRING_SIZE];
   PayloadType payload_type;
-  char payload_utf8[MAX_STRING_SIZE];
+  char payload_utf8[306];
   uint8_t payload_binary[MAX_BINARY_PAYLOAD_SIZE];
   uint8_t payload_binary_size;  // Actual size of binary payload
 };
@@ -46,6 +46,27 @@ inline DeserializationResult deserialize(const uint8_t* buffer, uint16_t length,
   uint16_t index = 4;  // Start after the 4-byte length field
 
   Serial.println("Initial length: " + String(length));
+
+  // First, let's attempt to find the session ID
+  const char* sessionIdKey = "\"sessionId\":\"";
+  const char* sessionIdStart = strstr((const char*)buffer + index, sessionIdKey);
+
+  if (sessionIdStart) {
+    sessionIdStart += strlen(sessionIdKey);  // Move to the start of the sessionId value
+    const char* sessionIdEnd = strchr(sessionIdStart, '\"');
+
+    if (sessionIdEnd) {
+      int sessionIdLength = sessionIdEnd - sessionIdStart;
+      memcpy(payloadUtf8, sessionIdStart, sessionIdLength);
+      payloadUtf8[sessionIdLength] = '\0';  // Null-terminate
+
+      Serial.println("Extracted sessionId: " + String(payloadUtf8));
+      return ExpandedCastMessageSerializer::DESERIALIZATION_SUCCESS;  // Indicate that only part of the message was deserialized
+    }
+  }
+
+  // If we are here, it means we didn't find a session ID.
+  // Let's now search for a valid JSON payload.
 
   int payloadStart = -1;
   int braceCount = 0;
@@ -77,75 +98,35 @@ inline DeserializationResult deserialize(const uint8_t* buffer, uint16_t length,
 
     return ExpandedCastMessageSerializer::DESERIALIZATION_SUCCESS;
   } else {
-    // Ensure null-termination before using strstr
-    char tempBuffer[length - 4 + 1];
-    memcpy(tempBuffer, &buffer[4], length - 4);
-    tempBuffer[length - 4] = '\0';
-
-    const char* sessionIdKey = "\"sessionId\":\"";
-    const char* sessionIdStart = strstr((const char*)buffer + payloadStart, sessionIdKey);
-
-    if (sessionIdStart) {
-      sessionIdStart += strlen(sessionIdKey);  // Move to the start of the sessionId value
-      const char* sessionIdEnd = strchr(sessionIdStart, '\"');
-
-      if (sessionIdEnd) {
-        int sessionIdLength = sessionIdEnd - sessionIdStart;
-        memcpy(payloadUtf8, sessionIdStart, sessionIdLength);
-        payloadUtf8[sessionIdLength] = '\0';  // Null-terminate
-
-        Serial.println("Extracted sessionId: " + String(payloadUtf8));
-        return ExpandedCastMessageSerializer::DESERIALIZATION_SUCCESS;  // Indicate that only part of the message was deserialized
-      } else {
-        Serial.println("Failed to find the end of the sessionId value.");
-      }
-    } else {
-      int distanceFromStart = sessionIdStart - (const char*)buffer;
-      Serial.println("Failed to find sessionId key. Printing first 400 characters of buffer for inspection:");
-      Serial.println(String((const char*)buffer, 500));
-    }
+    Serial.println("Failed to identify complete JSON payload or sessionId within buffer");
+    return ExpandedCastMessageSerializer::INVALID_FORMAT;
   }
-
-  Serial.println("Failed to identify complete JSON payload or sessionId within buffer");
-  return ExpandedCastMessageSerializer::INVALID_FORMAT;
 }
 
-inline SerializationResult serialize(const CastMessage& message, uint8_t* buffer, uint16_t& index, uint16_t bufferSize) {
-  
-  // Helper function to serialize a number as Varint
-  auto serializeVarint = [&](uint32_t value) -> uint16_t {
-      uint16_t writtenBytes = 0;
-      do {
-          uint8_t byte = value & 0x7F;
-          value >>= 7;
-          if (value) byte |= 0x80; // Set the top bit if there are more bytes to come
-          if (index + 1 > bufferSize) return 0; // Buffer overflow
-          buffer[index++] = byte;
-          writtenBytes++;
-      } while (value);
-      return writtenBytes;
-  };
-
-  // Helper function to add strings
+SerializationResult serialize(const CastMessage& message, uint8_t* buffer, uint16_t& index, uint16_t bufferSize) {
   auto addString = [&](const char* str, uint8_t fieldNumber) {
-      uint8_t length = strlen(str);
-      if (index + length + 2 > bufferSize) return BUFFER_OVERFLOW;  // +2 for field tag and length
-      buffer[index++] = (fieldNumber << 3) | 2;                     // Length-delimited
-      if (serializeVarint(length) == 0) return BUFFER_OVERFLOW;
-      for (uint8_t i = 0; i < length; ++i) {
-          buffer[index++] = str[i];
-      }
-      return SUCCESS;
+    uint16_t length = strlen(str);
+    if (index + length + 3 > bufferSize) return BUFFER_OVERFLOW;  // +3 for potential longer varint
+    buffer[index++] = (fieldNumber << 3) | 2;  // Length-delimited
+    // Encode the length as varint
+    while (length >= 0x80) {
+      buffer[index++] = (length & 0x7F) | 0x80;
+      length >>= 7;
+    }
+    buffer[index++] = length;
+    memcpy(&buffer[index], str, length);
+    index += length;
+    return SUCCESS;
   };
 
   // Protocol Version
-  if (index + 2 > bufferSize) return BUFFER_OVERFLOW;  // +2 for field tag and value
-  buffer[index++] = 0x08;                              // Field 1, Varint
-  buffer[index++] = message.protocol_version;
-
+  if (index + 2 > bufferSize) return BUFFER_OVERFLOW;
+  buffer[index++] = 0x08;  // Field 1, Varint
+  buffer[index++] = 0x00;  // CASTV2_1_0
+  
   // Source ID
   if (addString(message.source_id, 2) != SUCCESS) return BUFFER_OVERFLOW;
-
+  
   // Destination ID
   if (addString(message.destination_id, 3) != SUCCESS) return BUFFER_OVERFLOW;
 
@@ -153,21 +134,14 @@ inline SerializationResult serialize(const CastMessage& message, uint8_t* buffer
   if (addString(message.namespace_, 4) != SUCCESS) return BUFFER_OVERFLOW;
 
   // Payload Type
-  if (index + 2 > bufferSize) return BUFFER_OVERFLOW;  // +2 for field tag and value
-  buffer[index++] = 0x28;                              // Field 5, Varint
-  buffer[index++] = message.payload_type;
+  if (index + 2 > bufferSize) return BUFFER_OVERFLOW;
+  buffer[index++] = 0x28;  // Field 5, Varint
+  buffer[index++] = 0x00;  // STRING
 
-  // Actual Payload (string or binary)
-  if (message.payload_type == STRING) {
-      if (addString(message.payload_utf8, 6) != SUCCESS) return BUFFER_OVERFLOW;
-  } else {                                                                             // BINARY
-      if (index + message.payload_binary_size + 2 > bufferSize) return BUFFER_OVERFLOW;  // +2 for field tag and length
-      buffer[index++] = (7 << 3) | 2;                                                    // Field 7, Length-delimited
-      if (serializeVarint(message.payload_binary_size) == 0) return BUFFER_OVERFLOW;
-      for (uint8_t i = 0; i < message.payload_binary_size; ++i) {
-          buffer[index++] = message.payload_binary[i];
-      }
-  }
+  // Payload
+  if (addString(message.payload_utf8, 6) != SUCCESS) return BUFFER_OVERFLOW;
+
+  Serial.println("Serialized length: " + String(index));
 
   return SUCCESS;
 }

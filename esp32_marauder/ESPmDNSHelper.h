@@ -23,13 +23,15 @@ struct Devices
 
 class ESPmDNSHelper {
 public:
-    ESPmDNSHelper(const char* inSsid, const char* inpaSsword);
+    ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target = nullptr, const char* url = nullptr);
     ~ESPmDNSHelper();
 
     WiFiClient unsecureclient;
     BSSL_TCP_Client SSLClient;
     String host;
     uint16_t port;
+    const char* TargetIP;
+    const char* TargetURL;
     const char* ssid;
     const char* password;
 

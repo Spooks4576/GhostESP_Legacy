@@ -106,7 +106,7 @@ const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 const char PROGMEM HELP_YOUTUBECONNECT_CMD[] = "dialconnect -u <app name> -c <AppUrl> [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
-const char PROGMEM HELP_CHROMECONNECT_CMD[] = "chromeconnect [-n <ssid_name> -p <password>]";
+const char PROGMEM HELP_CHROMECONNECT_CMD[] = "chromeconnect [-n <ssid_name> -p <password> -u <YTID> -t <TargetLocalIP>]";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
