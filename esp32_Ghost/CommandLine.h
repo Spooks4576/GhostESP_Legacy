@@ -68,6 +68,21 @@ struct ArgumentHandlerN<Arg1, Arg2, Arg3> {
     }
 };
 
+// 4 args
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct ArgumentHandlerN<Arg1, Arg2, Arg3, Arg4> {
+    using FuncType = void (*)(Arg1, Arg2, Arg3, Arg4);
+    FuncType func_;
+
+    ArgumentHandlerN(FuncType func) : func_(func) {}
+
+    void call(String tokens[], int tokenCount) { 
+        if(tokenCount == 4 && func_) {
+            func_(tokens[0].c_str(), tokens[1].c_str(), tokens[2].c_str(), tokens[3].c_str());
+        }
+    }
+};
+
 class CommandBase {
 public:
     CommandBase(const String& command, const String& description)

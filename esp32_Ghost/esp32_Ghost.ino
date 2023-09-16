@@ -2,6 +2,7 @@
 #include "flipperLED.h"
 #include "CommandLine.h"
 #include "YoutubeController.h"
+#include "ESPmDNSHelper.h"
 #include "Dial.h"
 
 flipperLED led;
@@ -19,6 +20,23 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
 
   delete YtController;
   delete dial;
+}
+
+void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
+{
+  led.TurnPurple();
+  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, DeviceTarget, URL);
+
+  delete CCTargeter;
+
+}
+
+void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL)
+{
+  led.TurnPurple();
+  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL);
+
+  delete CCTargeter;
 }
 
 void RickRollTV(const char* SSID, const char* Password) {
@@ -43,7 +61,7 @@ void RickRollTV(const char* SSID, const char* Password) {
 
 void handleStopCommand() {
     Serial.println("Rebooting...");
-    delay(100);  // short delay to allow the Serial message to be sent
+    delay(500);
     esp_restart();
 }
 
@@ -56,11 +74,13 @@ void setup() {
   led.RunSetup();
 }
 
-Command<const char*, const char*, const char*> cmd1("YTConnect", "Connect to YouTube. Usage: YTConnect <YTURL> <SSID> <Password>", YTConnect);
+Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
+Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
+Command<const char*, const char*, const char*> cmd4("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd3("stop", "Reboots the ESP32.", handleStopCommand);
-const int numCommands = 3;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3};
+const int numCommands = 5;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5};
 
 CommandLine commandli(commands, numCommands);
 
