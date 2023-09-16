@@ -59,11 +59,12 @@ void YouTubeService::BindSessionID(Device& device) {
 
   String jsonData = "{count: 0 }";
 
-  sendHeaders(ServerAddress, BindEndpoint, jsonData, "application/json");
+  sendHeaders(ServerAddress, BindEndpoint, jsonData, urlParams, "application/json");
 
   String response = readResponse();
 
   DynamicJsonDocument doc(4096);
+  Serial.println(response);
   Serial.println(extractJSON(response));
   DeserializationError error = deserializeJson(doc, extractJSON(response));
 
@@ -104,7 +105,7 @@ String YouTubeService::getToken(const String& screenId) {
   if (!connectToServer(ServerAddress, port)) return "";
 
   String postData = "screen_ids=" + screenId;
-  sendHeaders(ServerAddress, GetLoungeTokenEndpoint, postData, "application/x-www-form-urlencoded");
+  sendHeaders(ServerAddress, GetLoungeTokenEndpoint, postData, "", "application/x-www-form-urlencoded");
 
   String entireResponse = readResponse();
 
@@ -172,7 +173,7 @@ void YouTubeService::sendCommand(const String& command, const String& videoId, c
     formData += "&req0_videoId=" + videoId;
     formData += "&req0_listId=" + device.listID;
 
-    sendHeaders(ServerAddress, BindEndpoint, formData, "application/x-www-form-urlencoded");
+    sendHeaders(ServerAddress, BindEndpoint, formData, urlParams, "application/x-www-form-urlencoded");
 
     String response = readResponse();
 

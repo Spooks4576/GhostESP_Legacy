@@ -3,90 +3,149 @@
 
 #include <Arduino.h>
 #include <vector>
-#include <utility>
+
+#define MAX_COMMANDS 10
+#define MAX_TOKENS 20
+
+template <typename... Args>
+struct ArgumentHandlerN;  // Primary template
+
+template <>
+struct ArgumentHandlerN<> {
+    using FuncType = void (*)();
+    FuncType func_;
+
+    ArgumentHandlerN(FuncType func) : func_(func) {}
+
+    void call(String tokens[], int tokenCount) { 
+        if(tokenCount == 0 && func_) {
+            func_();
+        }
+    }
+};
+
+template <typename Arg1>
+struct ArgumentHandlerN<Arg1> {
+    using FuncType = void (*)(Arg1);
+    FuncType func_;
+
+    ArgumentHandlerN(FuncType func) : func_(func) {}
+
+    void call(String tokens[], int tokenCount) { 
+        if(tokenCount == 1 && func_) {
+            func_(tokens[0].c_str());
+        }
+    }
+};
+
+// Specialization for 2 arguments
+template <typename Arg1, typename Arg2>
+struct ArgumentHandlerN<Arg1, Arg2> {
+    using FuncType = void (*)(Arg1, Arg2);
+    FuncType func_;
+
+    ArgumentHandlerN(FuncType func) : func_(func) {}
+
+    void call(String tokens[], int tokenCount) { 
+        if(tokenCount == 2 && func_) {
+            func_(tokens[0].c_str(), tokens[1].c_str());
+        }
+    }
+};
+
+// Specialization for 3 arguments
+template <typename Arg1, typename Arg2, typename Arg3>
+struct ArgumentHandlerN<Arg1, Arg2, Arg3> {
+    using FuncType = void (*)(Arg1, Arg2, Arg3);
+    FuncType func_;
+
+    ArgumentHandlerN(FuncType func) : func_(func) {}
+
+    void call(String tokens[], int tokenCount) { 
+        if(tokenCount == 3 && func_) {
+            func_(tokens[0].c_str(), tokens[1].c_str(), tokens[2].c_str());
+        }
+    }
+};
 
 class CommandBase {
 public:
+    CommandBase(const String& command, const String& description)
+        : command_(command), description_(description) {}
     virtual ~CommandBase() = default;
-    virtual void call(const std::vector<String>& tokens) = 0;
-    virtual const String& getCommandStr() const = 0;
-};
+    virtual void call(String tokens[], int tokenCount) = 0;
 
-template <typename... Args>
-struct Command : public CommandBase {
-    std::function<void(Args...)> func;
-
-    Command(const String& cmdStr, const String& helpStr, std::function<void(Args...)> func)
-        : commandStr(cmdStr), helpStr(helpStr), func(func) {}
-    String commandStr;
-    String helpStr;
-
-    const String& getCommandStr() const override {
-        return commandStr;
+    virtual const String& getCommandStr() const {
+        return command_;
     }
 
-    void call(const std::vector<String>& tokens) {
-        if (tokens.size() < sizeof...(Args)) {
-            Serial.println("Insufficient arguments.");
-            return;
-        }
-        callImpl(tokens);
+    String command_;
+    String description_;
+};
+
+template<typename... Args>
+class Command : public CommandBase {
+public:
+    Command(const String& command, const String& description, void (*func)(Args...))
+        : CommandBase(command, description), handler_(func) {}
+
+    void call(String tokens[], int tokenCount) override {
+        handler_.call(tokens, tokenCount);
     }
 
 private:
-    
-    void callImpl(const std::vector<String>& tokens) {
-        func(getArgs<Args>(tokens)...);
-    }
-
-    
-    template <typename T>
-    T getArgs(const std::vector<String>& tokens) {
-        return static_cast<T>(tokens.front().c_str());
-    }
+    ArgumentHandlerN<Args...> handler_;
 };
+
 
 class CommandLine {
 public:
-    CommandLine(std::vector<CommandBase*>& commands)
-        : commands(commands) {}
+  CommandLine(CommandBase* cmds[], size_t cmdCount)
+    : commands(cmds), cmdCount(cmdCount) {}
 
-    void loop() {
-        if (Serial.available()) {
-            String input = Serial.readStringUntil('\n');
-            input.trim();
+  void loop() {
+    if (Serial.available()) {
+      String input = Serial.readStringUntil('\n');
+      input.trim();
 
-            std::vector<String> tokens = tokenize(input, ' ');
+      String tokens[MAX_TOKENS];
+      int tokenCount = tokenize(input, ' ', tokens, MAX_TOKENS);
 
-            if (tokens.empty()) return;
+      if (tokenCount == 0) return;
 
-            for (const auto& cmd : commands) {
-                if (tokens[0] == cmd->getCommandStr()) {
-                    tokens.erase(tokens.begin());  // Remove the command from tokens
-                    cmd->call(tokens);
-                    return;
-                }
-            }
-            Serial.println("Unknown command. Type 'help' for a list of commands.");
+      for (size_t i = 0; i < cmdCount; i++) {
+        if (tokens[0] == commands[i]->getCommandStr()) {
+          // Remove the command from tokens
+          for (int j = 0; j < tokenCount - 1; j++) {
+            tokens[j] = tokens[j + 1];
+          }
+          tokenCount--;
+
+          commands[i]->call(tokens, tokenCount);
+          return;
         }
+      }
+      Serial.println("Unknown command. Type 'help' for a list of commands.");
     }
+  }
 
 private:
-    std::vector<CommandBase*> commands;
+  CommandBase** commands;
+  size_t cmdCount;
 
-    std::vector<String> tokenize(const String& str, char delimiter) {
-        std::vector<String> tokens;
-        int startIndex = 0, endIndex = 0;
-        while ((endIndex = str.indexOf(delimiter, startIndex)) >= 0) {
-            tokens.push_back(str.substring(startIndex, endIndex));
-            startIndex = endIndex + 1;
-        }
-        if (startIndex < str.length()) {
-            tokens.push_back(str.substring(startIndex));
-        }
-        return tokens;
+  int tokenize(const String& str, char delimiter, String output[], int maxTokens) {
+    int startIndex = 0, endIndex = 0;
+    int tokenCount = 0;
+
+    while ((endIndex = str.indexOf(delimiter, startIndex)) >= 0 && tokenCount < maxTokens) {
+      output[tokenCount++] = str.substring(startIndex, endIndex);
+      startIndex = endIndex + 1;
     }
+    if (startIndex < str.length() && tokenCount < maxTokens) {
+      output[tokenCount++] = str.substring(startIndex);
+    }
+    return tokenCount;
+  }
 };
-
 
 #endif

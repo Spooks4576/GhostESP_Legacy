@@ -12,6 +12,7 @@ class flipperLED {
   public:
     void RunSetup();
     void offLED();
+    void TurnPurple();
 };
 
 #endif

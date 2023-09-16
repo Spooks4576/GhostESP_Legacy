@@ -8,7 +8,7 @@
 
 class DIALClient {
 public:
-    DIALClient(String& YUrl, String& ssid, String& password, AppController* appHandler)
+    DIALClient(const char* YUrl, const char* ssid, const char* password, AppController* appHandler)
         : ssid(ssid), password(password), appHandler(appHandler), YTurl(YUrl) {}
 
     void connectWiFi();
