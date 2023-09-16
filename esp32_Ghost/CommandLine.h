@@ -1,149 +1,92 @@
 #ifndef CommandLine_h
 #define CommandLine_h
 
-#include "configs.h"
+#include <Arduino.h>
+#include <vector>
+#include <utility>
 
-#ifdef HAS_SCREEN
-  #include "MenuFunctions.h"
-  #include "Display.h"
-#endif 
+class CommandBase {
+public:
+    virtual ~CommandBase() = default;
+    virtual void call(const std::vector<String>& tokens) = 0;
+    virtual const String& getCommandStr() const = 0;
+};
 
-#include "WiFiScan.h"
-//#include "Web.h"
-#ifdef HAS_SD
-  #include "SDInterface.h"
-#endif
-#include "settings.h"
-#include "LedInterface.h"
+template <typename... Args>
+struct Command : public CommandBase {
+    std::function<void(Args...)> func;
 
-#ifdef HAS_SCREEN
-  extern MenuFunctions menu_function_obj;
-  extern Display display_obj;
-#endif
+    Command(const String& cmdStr, const String& helpStr, std::function<void(Args...)> func)
+        : commandStr(cmdStr), helpStr(helpStr), func(func) {}
+    String commandStr;
+    String helpStr;
 
-extern WiFiScan wifi_scan_obj;
-//extern Web web_obj;
-#ifdef HAS_SD
-  extern SDInterface sd_obj;
-#endif
-extern Settings settings_obj;
-extern LedInterface led_obj;
-extern LinkedList<AccessPoint>* access_points;
-extern LinkedList<ssid>* ssids;
-extern LinkedList<Station>* stations;
-extern const String PROGMEM version_number;
-extern const String PROGMEM board_target;
+    const String& getCommandStr() const override {
+        return commandStr;
+    }
 
-//// Commands
+    void call(const std::vector<String>& tokens) {
+        if (tokens.size() < sizeof...(Args)) {
+            Serial.println("Insufficient arguments.");
+            return;
+        }
+        callImpl(tokens);
+    }
 
-// Admin
-const char PROGMEM CH_CMD[] = "channel";
-const char PROGMEM CLEARAP_CMD[] = "clearlist";
-const char PROGMEM REBOOT_CMD[] = "reboot";
-const char PROGMEM UPDATE_CMD[] = "update";
-const char PROGMEM HELP_CMD[] = "help";
-const char PROGMEM SETTINGS_CMD[] = "settings";
-const char PROGMEM LS_CMD[] = "ls";
-const char PROGMEM LED_CMD[] = "led";
+private:
+    
+    void callImpl(const std::vector<String>& tokens) {
+        func(getArgs<Args>(tokens)...);
+    }
 
-// WiFi sniff/scan
-const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
-const char PROGMEM SIGSTREN_CMD[] = "sigmon";
-const char PROGMEM SCANAP_CMD[] = "scanap";
-const char PROGMEM SCANSTA_CMD[] = "scansta";
-const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
-const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
-const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
-const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
-const char PROGMEM SNIFF_ESP_CMD[] = "sniffesp";
-const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
-const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
-const char PROGMEM STOPSCAN_CMD[] = "stopscan";
-
-// WiFi attack
-const char PROGMEM ATTACK_CMD[] = "attack";
-const char PROGMEM ATTACK_TYPE_DEAUTH[] = "deauth";
-const char PROGMEM ATTACK_TYPE_BEACON[] = "beacon";
-const char PROGMEM ATTACK_TYPE_PROBE[] = "probe";
-const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
-
-// WiFi Aux
-const char PROGMEM LIST_AP_CMD[] = "list";
-const char PROGMEM SEL_CMD[] = "select";
-const char PROGMEM SSID_CMD[] = "ssid";
-const char PROGMEM JOINWIFI_CMD[] = "join";
-const char PROGMEM YOUTUBECONNECT_CMD[] = "dialconnect";
-const char PROGMEM CHROMECONNECT_CMD[] = "chromeconnect";
-
-// Bluetooth sniff/scan
-const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
-const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
-
-
-//// Command help messages
-// Admin
-const char PROGMEM HELP_HEAD[] = "============ Commands ============";
-const char PROGMEM HELP_CH_CMD[] = "channel [-s <channel>]";
-const char PROGMEM HELP_CLEARAP_CMD_A[] = "clearlist -a/-c/-s";
-const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
-const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
-const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
-const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
-const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
-
-// WiFi sniff/scan
-const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start]";
-const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
-const char PROGMEM HELP_SCANAP_CMD[] = "scanap";
-const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
-const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
-const char PROGMEM HELP_SNIFF_BEACON_CMD[] = "sniffbeacon";
-const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
-const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
-const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
-const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
-const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
-const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
-const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
-const char PROGMEM HELP_YOUTUBECONNECT_CMD[] = "dialconnect -u <app name> -c <AppUrl> [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
-const char PROGMEM HELP_CHROMECONNECT_CMD[] = "chromeconnect [-n <ssid_name> -p <password> -u <YTID> -t <TargetLocalIP>]";
-
-// WiFi attack
-const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
-
-// WiFi Aux
-const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
-const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
-const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
-const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
-const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
-const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
-
-// Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt";
-const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
-const char PROGMEM HELP_FOOT[] = "==================================";
-
+    
+    template <typename T>
+    T getArgs(const std::vector<String>& tokens) {
+        return static_cast<T>(tokens.front().c_str());
+    }
+};
 
 class CommandLine {
-  private:
-    String getSerialInput();
-    LinkedList<String> parseCommand(String input, char* delim);
-    String toLowerCase(String str);
-    void filterAccessPoints(String filter);
-    void runCommand(String input);
-    bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
-    bool inRange(int max, int index);
-    bool apSelected();
-    bool hasSSIDs();
-    void showCounts(int selected, int unselected = -1);
-    int argSearch(LinkedList<String>* cmd_args, String key);
-        
-  public:
-    CommandLine();
+public:
+    CommandLine(std::vector<CommandBase*>& commands)
+        : commands(commands) {}
 
-    void RunSetup();
-    void main(uint32_t currentTime);
+    void loop() {
+        if (Serial.available()) {
+            String input = Serial.readStringUntil('\n');
+            input.trim();
+
+            std::vector<String> tokens = tokenize(input, ' ');
+
+            if (tokens.empty()) return;
+
+            for (const auto& cmd : commands) {
+                if (tokens[0] == cmd->getCommandStr()) {
+                    tokens.erase(tokens.begin());  // Remove the command from tokens
+                    cmd->call(tokens);
+                    return;
+                }
+            }
+            Serial.println("Unknown command. Type 'help' for a list of commands.");
+        }
+    }
+
+private:
+    std::vector<CommandBase*> commands;
+
+    std::vector<String> tokenize(const String& str, char delimiter) {
+        std::vector<String> tokens;
+        int startIndex = 0, endIndex = 0;
+        while ((endIndex = str.indexOf(delimiter, startIndex)) >= 0) {
+            tokens.push_back(str.substring(startIndex, endIndex));
+            startIndex = endIndex + 1;
+        }
+        if (startIndex < str.length()) {
+            tokens.push_back(str.substring(startIndex));
+        }
+        return tokens;
+    }
 };
+
 
 #endif
