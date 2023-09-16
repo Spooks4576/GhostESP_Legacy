@@ -1,7 +1,7 @@
 #include "ESPmDNSHelper.h"
 #include "CastChannel.h"
 
-ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target, const char* url) {
+ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const char* Target, const char* url, const char* Appid) {
     mdns = new MDNSResponder();
     ssid = inSsid;
     password = inpaSsword;
@@ -23,6 +23,10 @@ ESPmDNSHelper::ESPmDNSHelper(const char* inSsid, const char* inpaSsword, const c
       TargetURL = "";
     }
 
+    if (Appid != "")
+    {
+      AppID = Appid;
+    }
     connectWiFi();
 }
 
@@ -176,7 +180,7 @@ void ESPmDNSHelper::SendAuth()
 
   StaticJsonDocument<200> doc2;
   doc2["type"] = "LAUNCH";
-  doc2["appId"] = "233637DE";
+  doc2["appId"] = AppID;
   doc2["requestId"] = 1;
   String LaunchString;
   serializeJson(doc2, LaunchString);
@@ -190,7 +194,9 @@ void ESPmDNSHelper::SendAuth()
   JsonObject volume = doc3.createNestedObject("volume");
 
   
-  volume["level"] = 1;
+  volume["level"] = 1.0;
+
+  doc3["requestId"] = 1;
 
   String VolumeString;
   serializeJson(doc3, VolumeString);

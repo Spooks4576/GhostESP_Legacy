@@ -25,7 +25,7 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
 void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
 {
   led.TurnPurple();
-  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, DeviceTarget, URL);
+  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, DeviceTarget, URL, "233637DE");
 
   delete CCTargeter;
 
@@ -34,7 +34,7 @@ void YTChromeConnectToTarget(const char* SSID, const char* Password, const char*
 void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL)
 {
   led.TurnPurple();
-  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL);
+  ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL, "233637DE");
 
   delete CCTargeter;
 }
