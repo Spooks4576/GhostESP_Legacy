@@ -218,8 +218,9 @@ void ESPmDNSHelper::SendAuth()
   unsigned long startTime = millis();
   while (SSLClient) {
     RecieverChannel.checkForMessages();
+    delay(500);
     HeartBeat.send(HeartBeatString);
-    delay(1000);
+    delay(500);
   }
 
   Serial.println("Finished checking for messages.");

@@ -98,5 +98,10 @@ CommandLine commandli(commands, numCommands);
 void loop() {
   commandli.loop();
 
+  if (Portal)
+  {
+    Portal->loop();
+  }
+
   delay(100);
 }

