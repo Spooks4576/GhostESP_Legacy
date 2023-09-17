@@ -77,6 +77,9 @@ void ESPmDNSHelper::HandleMessage(String Session, String Data)
     ConnectChannel.send(CONNECTSTRING);
 
 
+    delay(1000);
+
+
     StaticJsonDocument<200> doc2;
     String CONNECTSTRING2;
     doc2["type"] = "getMdxSessionStatus";
@@ -218,9 +221,7 @@ void ESPmDNSHelper::SendAuth()
   unsigned long startTime = millis();
   while (SSLClient) {
     RecieverChannel.checkForMessages();
-    delay(500);
-    HeartBeat.send(HeartBeatString);
-    delay(500);
+    delay(1000);
   }
 
   Serial.println("Finished checking for messages.");
