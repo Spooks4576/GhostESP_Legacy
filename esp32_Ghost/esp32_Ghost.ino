@@ -3,9 +3,12 @@
 #include "CommandLine.h"
 #include "YoutubeController.h"
 #include "ESPmDNSHelper.h"
+#include "EvilPortal.h"
+
 #include "Dial.h"
 
 flipperLED led;
+EvilPortal* Portal;
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
@@ -20,6 +23,13 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
 
   delete YtController;
   delete dial;
+}
+
+void StartEvilPortal(const char* SSID)
+{
+  Portal = new EvilPortal(SSID);
+
+  Portal->begin();
 }
 
 void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
@@ -79,8 +89,9 @@ Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to Yo
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd4("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd3("stop", "Reboots the ESP32.", handleStopCommand);
-const int numCommands = 5;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5};
+Command<const char*> cmd6("StartEvilPortal", "Starts Evil Portal Usage: StartEvilPortal <SSID>", StartEvilPortal);
+const int numCommands = 6;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
 
 CommandLine commandli(commands, numCommands);
 
