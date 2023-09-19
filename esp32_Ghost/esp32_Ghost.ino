@@ -9,7 +9,7 @@
 #include "Dial.h"
 
 flipperLED led;
-EvilPortal* Portal;
+EvilPortal Portal;
 WiFiTools wifi;
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
@@ -27,11 +27,9 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   delete dial;
 }
 
-void StartEvilPortal(const char* SSID)
+void StartEvilPortal()
 {
-  Portal = new EvilPortal(SSID);
-
-  Portal->begin();
+  Portal.begin();
 }
 
 void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
@@ -110,14 +108,13 @@ Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: Rick
 Command<const char*, const char*, const char*> cmd4("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd3("stop", "Reboots the ESP32.", handleStopCommand);
 Command<> cmd7("RickRollSpam", "Spam Access Points With Never Gonna Give You Up", BeaconSpamRickRoll);
-Command<const char*> cmd6("StartEvilPortal", "Starts Evil Portal Usage: StartEvilPortal <SSID>", StartEvilPortal);
+Command<> cmd6("StartEvilPortal", "Starts Evil Portal", StartEvilPortal);
 const int numCommands = 7;
 CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
 
 CommandLine commandli(commands, numCommands);
 
 void loop() {
-  commandli.loop();
-
+  Portal.loop(commandli);
   delay(100);
 }

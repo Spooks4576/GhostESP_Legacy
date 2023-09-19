@@ -123,9 +123,9 @@ public:
   CommandLine(CommandBase* cmds[], size_t cmdCount)
     : commands(cmds), cmdCount(cmdCount) {}
 
-  void loop() {
-    if (Serial.available()) {
-      String input = Serial.readStringUntil('\n');
+  void loop(String AlreadyReadInput = "") {
+    if (Serial.available() || AlreadyReadInput != "") {
+      String input = AlreadyReadInput != "" ? AlreadyReadInput : Serial.readString();
       input.trim();
 
       Serial.println(input);
