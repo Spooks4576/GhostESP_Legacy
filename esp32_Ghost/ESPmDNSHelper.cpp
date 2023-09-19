@@ -62,6 +62,7 @@ void LoadMedia(Channel MediaChannel, String contentId, String contentType, Strin
 
 void ESPmDNSHelper::HandleMessage(String Session, String Data)
 {
+  SessionIDIndex++;
   if (!Session.isEmpty())
   {
     Channel ConnectChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.cast.tp.connection", "JSON");
@@ -86,6 +87,8 @@ void ESPmDNSHelper::HandleMessage(String Session, String Data)
     serializeJson(doc2, CONNECTSTRING2);
 
     MediaChannel.send(CONNECTSTRING2);
+
+    SessionIDIndex = 0;
 
   }
 }
@@ -197,7 +200,7 @@ void ESPmDNSHelper::SendAuth()
   JsonObject volume = doc3.createNestedObject("volume");
 
   
-  volume["level"] = 1.0;
+  volume["level"] = 1;
 
   doc3["requestId"] = 1;
 

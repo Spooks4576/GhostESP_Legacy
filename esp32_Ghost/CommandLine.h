@@ -128,6 +128,8 @@ public:
       String input = Serial.readStringUntil('\n');
       input.trim();
 
+      Serial.println(input);
+
       String tokens[MAX_TOKENS];
       int tokenCount = tokenize(input, ' ', '"', tokens, MAX_TOKENS);
 

@@ -35,6 +35,7 @@ public:
     const char* ssid;
     const char* password;
     const char* AppID;
+    int SessionIDIndex;
 
     void connectWiFi();
 

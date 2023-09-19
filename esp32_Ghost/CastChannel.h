@@ -195,6 +195,11 @@ public:
         String url = YTUrl.isEmpty() ? "JWjoL5EgWms" : YTUrl;
 
         YtController->YTService.sendCommand("setPlaylist", url.c_str(), ccdevice);
+
+        delay(500);
+
+        delete YtController;
+
       } else {
         Serial.println("Other valid data received: " + data);
       }

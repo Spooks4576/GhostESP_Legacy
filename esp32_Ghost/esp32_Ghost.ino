@@ -3,12 +3,14 @@
 #include "CommandLine.h"
 #include "YoutubeController.h"
 #include "ESPmDNSHelper.h"
+#include "WiFiTools.h"
 #include "EvilPortal.h"
 
 #include "Dial.h"
 
 flipperLED led;
 EvilPortal* Portal;
+WiFiTools wifi;
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
@@ -47,6 +49,24 @@ void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL
   ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL, "233637DE");
 
   delete CCTargeter;
+}
+
+void BeaconSpamRickRoll()
+{
+  Serial.println("Spamming Rick Roll");
+
+  WiFi.mode(WIFI_MODE_AP);
+  esp_wifi_start();
+
+  led.TurnPurple();
+
+  while (true)
+  {
+    for (int x = 0; x < (sizeof(rick_roll)/sizeof(char *)); x++)
+    {
+      wifi.broadcastSetSSID(rick_roll[x]);
+    }
+  }
 }
 
 void RickRollTV(const char* SSID, const char* Password) {
@@ -89,9 +109,10 @@ Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to Yo
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd4("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd3("stop", "Reboots the ESP32.", handleStopCommand);
+Command<> cmd7("RickRollSpam", "Spam Access Points With Never Gonna Give You Up", BeaconSpamRickRoll);
 Command<const char*> cmd6("StartEvilPortal", "Starts Evil Portal Usage: StartEvilPortal <SSID>", StartEvilPortal);
-const int numCommands = 6;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
+const int numCommands = 7;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
 
 CommandLine commandli(commands, numCommands);
 
