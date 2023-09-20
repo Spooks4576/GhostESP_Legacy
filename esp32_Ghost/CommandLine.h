@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include "MultiThread.h"
 
 #define MAX_COMMANDS 10
 #define MAX_TOKENS 20
@@ -123,17 +124,19 @@ public:
   CommandLine(CommandBase* cmds[], size_t cmdCount)
     : commands(cmds), cmdCount(cmdCount) {}
 
-  void loop(String AlreadyReadInput = "") {
+  bool loop(String AlreadyReadInput = "") {
     if (Serial.available() || AlreadyReadInput != "") {
-      String input = AlreadyReadInput != "" ? AlreadyReadInput : Serial.readString();
-      input.trim();
+      String input = AlreadyReadInput != "" ? AlreadyReadInput : Serial.readStringUntil('/n');
+      input.trim(); 
 
-      Serial.println(input);
+      if (input.startsWith("settings")) return false; // Hack for Marauder app. until i can produce my own flipper app
 
       String tokens[MAX_TOKENS];
       int tokenCount = tokenize(input, ' ', '"', tokens, MAX_TOKENS);
 
-      if (tokenCount == 0) return;
+      if (tokenCount == 0) return false;
+
+      Serial.println(tokens[0]);
 
       for (size_t i = 0; i < cmdCount; i++) {
         if (tokens[0] == commands[i]->getCommandStr()) {
@@ -142,12 +145,13 @@ public:
             tokens[j] = tokens[j + 1];
           }
           tokenCount--;
-
+          ShouldMultithread = true;
           commands[i]->call(tokens, tokenCount);
-          return;
+          return true;
         }
       }
       Serial.println("Unknown command. Type 'help' for a list of commands.");
+      return false;
     }
   }
 

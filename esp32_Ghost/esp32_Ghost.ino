@@ -12,6 +12,7 @@ flipperLED led;
 EvilPortal Portal;
 WiFiTools wifi;
 
+
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
 
@@ -87,12 +88,6 @@ void RickRollTV(const char* SSID, const char* Password) {
   delete dial;
 }
 
-void handleStopCommand() {
-    Serial.println("Rebooting...");
-    delay(500);
-    esp_restart();
-}
-
 void setup() {
   Serial.begin(115200);
 
@@ -100,21 +95,31 @@ void setup() {
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
   Serial.println("Welcome to Ghost ESP Made by Spooky");
   led.RunSetup();
+
+  xTaskCreatePinnedToCore(LoopTask,"LoopTask",10000,NULL,1,NULL,1);
 }
 
 Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
 Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
-Command<const char*, const char*, const char*> cmd4("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
-Command<> cmd3("stop", "Reboots the ESP32.", handleStopCommand);
-Command<> cmd7("RickRollSpam", "Spam Access Points With Never Gonna Give You Up", BeaconSpamRickRoll);
-Command<> cmd6("StartEvilPortal", "Starts Evil Portal", StartEvilPortal);
-const int numCommands = 7;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
+Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
+Command<> cmd4("RickRollSpam", "Spam Access Points With a Rick Roll", BeaconSpamRickRoll);
+const int numCommands = 5;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5};
 
 CommandLine commandli(commands, numCommands);
 
 void loop() {
   Portal.loop(commandli);
   delay(100);
+}
+
+void LoopTask(void *parameter) {
+    while (true) {
+      if (ShouldMultithread)
+      {
+        Portal.loop(commandli);
+      }
+      vTaskDelay(1000 / portTICK_PERIOD_MS);  // Run every second
+    }
 }
