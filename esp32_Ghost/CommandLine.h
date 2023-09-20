@@ -8,6 +8,40 @@
 #define MAX_COMMANDS 10
 #define MAX_TOKENS 20
 
+void retainLineExcludingKeywords(String &content, const String &keyword1, const String &keyword2) {
+    int index1 = content.indexOf(keyword1);
+    int index2 = content.indexOf(keyword2);
+    
+    // If neither keyword is found, return the content as-is
+    if (index1 == -1 && index2 == -1) {
+        return;
+    }
+
+    // Split the content into lines
+    int startPos = 0;
+    int endPos = content.indexOf('\n');
+    while (endPos != -1) {
+        String line = content.substring(startPos, endPos);
+        if (line.indexOf(keyword1) == -1 && line.indexOf(keyword2) == -1 && line.length() > 0) { // Check for non-empty line
+            content = line;
+            return;
+        }
+        startPos = endPos + 1;
+        endPos = content.indexOf('\n', startPos);
+    }
+
+    // Check the last line (if there's no newline at the end)
+    if (startPos < content.length()) {
+        String line = content.substring(startPos);
+        if (line.indexOf(keyword1) == -1 && line.indexOf(keyword2) == -1 && line.length() > 0) { // Check for non-empty line
+            content = line;
+            return;
+        }
+    }
+
+    content = "";  // If no suitable line is found, clear the content
+}
+
 template<typename... Args>
 struct ArgumentHandlerN;  // Primary template
 
@@ -129,14 +163,18 @@ public:
       String input = AlreadyReadInput != "" ? AlreadyReadInput : Serial.readStringUntil('/n');
       input.trim(); 
 
-      if (input.startsWith("settings")) return false; // Hack for Marauder app. until i can produce my own flipper app
+      if (input.startsWith("settings"))
+      {
+        retainLineExcludingKeywords(AlreadyReadInput, "settings -s EnableLED enable", "settings -s SavePCAP enable");
+      } // Hack for Marauder app. until i can produce my own flipper app
+
+      Serial.println("Input");
+      Serial.println(AlreadyReadInput);
 
       String tokens[MAX_TOKENS];
-      int tokenCount = tokenize(input, ' ', '"', tokens, MAX_TOKENS);
+      int tokenCount = tokenize(AlreadyReadInput, ' ', '"', tokens, MAX_TOKENS);
 
       if (tokenCount == 0) return false;
-
-      Serial.println(tokens[0]);
 
       for (size_t i = 0; i < cmdCount; i++) {
         if (tokens[0] == commands[i]->getCommandStr()) {

