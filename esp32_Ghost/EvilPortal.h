@@ -12,9 +12,7 @@ WiFiManager wifiManager;
 
 String readSerialBuffer(bool &isHtml, bool &isAp) {
     String buffer = "";
-    while (Serial.available()) {
-        buffer += (char) Serial.read();
-    }
+    buffer = Serial.readString();
 
     isHtml = buffer.startsWith("sethtml=");
     isAp = buffer.startsWith("setap=");

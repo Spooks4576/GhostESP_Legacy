@@ -168,9 +168,6 @@ public:
         retainLineExcludingKeywords(AlreadyReadInput, "settings -s EnableLED enable", "settings -s SavePCAP enable");
       } // Hack for Marauder app. until i can produce my own flipper app
 
-      Serial.println("Input");
-      Serial.println(AlreadyReadInput);
-
       String tokens[MAX_TOKENS];
       int tokenCount = tokenize(AlreadyReadInput, ' ', '"', tokens, MAX_TOKENS);
 
