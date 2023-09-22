@@ -104,7 +104,7 @@ void setup() {
   Serial.println("Welcome to Ghost ESP Made by Spooky");
   led.RunSetup();
 
-  xTaskCreatePinnedToCore(LoopTask,"LoopTask",10000,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(LoopTask,"LoopTask",20000,NULL,1,NULL,1);
 
   //Serial1.begin(115200);
 }

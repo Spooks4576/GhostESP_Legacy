@@ -10,6 +10,7 @@
     #include <ArduinoJson.h>
     #include <ESP_SSLClient.h>
     #include <WebSocketClient.h>
+    #include "MultiThread.h"
 #else
     #error "This code is intended for ESP32 only!"
 #endif
@@ -51,7 +52,10 @@ public:
     void CheckMessageLoop();
 
     void HandleMessage(String Session, String Data);
+
+    void HandleCloseConnection();
 private:
+    String CurrentSessionID;
     MDNSResponder* mdns;
     std::vector<Devices> NetDevices;
 };

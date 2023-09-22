@@ -6,6 +6,7 @@
 #include "CastSerializer.h"
 #include <ArduinoHttpClient.h>
 #include "YoutubeController.h"
+#include "ESPmDNSHelper.h"
 #include <functional>
 
 #define MAX_BUFFER_SIZE 1024
@@ -65,16 +66,12 @@ private:
   String destinationId;
   String namespace_;
   String encoding;
-  std::function<void(String, String)> messageCallback;
+  ESPmDNSHelper* Parent;
 
 public:
   String YTUrl;
-  Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "")
-    : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), messageCallback(nullptr) {}
-
-  void setMessageCallback(std::function<void(String, String)> callback) {
-    messageCallback = callback;
-  }
+  Channel(BSSL_TCP_Client& clientRef, String srcId, String destId, String ns, String enc = "", ESPmDNSHelper* InParent = nullptr)
+    : client(clientRef), sourceId(srcId), destinationId(destId), namespace_(ns), encoding(enc), Parent(InParent) {}
 
   String Deserialize_Internal(String serializedData) {
     uint8_t* buffer = new uint8_t[1000];
@@ -131,40 +128,44 @@ public:
   }
 
   void checkForMessages() {
-    const int maxBytesToRead = 500;
-    byte buffer[maxBytesToRead];
-    int bytesRead = client.read(buffer, min(client.available(), maxBytesToRead));
 
-    String serializedData = "";
+    if (client.available() > 0) {
+      const int maxBytesToRead = 500;
+      byte buffer[maxBytesToRead];
+      int bytesRead = client.read(buffer, min(client.available(), maxBytesToRead));
 
-    for (int i = 0; i < bytesRead; i++) {
-      if (buffer[i] < 16) serializedData += '0';
-      serializedData += String(buffer[i], HEX);
-    }
+      String serializedData = "";
 
-    if (bytesRead > 0) {
-      Serial.println("Received data: " + serializedData);
-      String jsonData = Deserialize_Internal(serializedData);
-
-      onMessage(sourceId, destinationId, namespace_, jsonData);
-
-      if (jsonData != "") {
-        Serial.println("Deserialized data: " + jsonData);
-      } else {
-        Serial.println("Failed to deserialize data or received empty response.");
+      for (int i = 0; i < bytesRead; i++) {
+        if (buffer[i] < 16) serializedData += '0';
+        serializedData += String(buffer[i], HEX);
       }
-    } else {
-      Serial.println("Received data length is not appropriate.");
+
+      if (bytesRead > 0) {
+        Serial.println("Received data: " + serializedData);
+        String jsonData = Deserialize_Internal(serializedData);
+
+        onMessage(sourceId, destinationId, namespace_, jsonData);
+
+        if (jsonData != "") {
+          Serial.println("Deserialized data: " + jsonData);
+        } else {
+          Serial.println("Failed to deserialize data or received empty response.");
+        }
+      } else {
+        Serial.println("Received data length is not appropriate.");
+      }
     }
   }
-
 
 
   void onMessage(String srcId, String destId, String ns, String data) {
     // Check if the data is a valid session ID first
     if (data != "" && isValidSessionId(data)) {
       Serial.println("Session ID: " + data);
-      messageCallback(data, data);
+      Serial.println("About to Do Message Callback");
+      Parent->HandleMessage(data, data);
+      Serial.println("Finished Callback Call");
     }
 
     else if (data != "") {
@@ -176,6 +177,10 @@ public:
       if (!error && doc["data"].containsKey("screenId")) {
         String screenId = doc["data"]["screenId"].as<String>();
         Serial.println("Found screenId: " + screenId);
+
+        Parent->HandleCloseConnection();
+
+        delay(500);  // short delay to make sure the connection actually closes
 
         client.stop();
 
