@@ -54,29 +54,13 @@ public:
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
     uint32_t len = snifferPacket->rx_ctrl.sig_len;
 
-    int fctl = ntohs(frameControl->fctl);
-    int frameType = (fctl & 0x0C) >> 2;     // Extracting the type field
-    int frameSubType = (fctl & 0xF0) >> 4;  // Extracting the subtype field
-
-    
-    if (frameType == 2 && frameSubType == 8) {
+    if (type == WIFI_PKT_MGMT) {
+      len -= 4;
+      int fctl = ntohs(frameControl->fctl);
       const wifi_ieee80211_packet_t* ipkt = (wifi_ieee80211_packet_t*)snifferPacket->payload;
       const WifiMgmtHdr* hdr = &ipkt->hdr;
-
-      Serial.println("4 Way Handshake Found");
-      Serial.print("fctl: ");
-      Serial.println(fctl);
-      Serial.print("duration: ");
-      Serial.println(hdr->duration);
-      Serial.print("da: ");
-      Serial.println(hdr->da, HEX);
-      Serial.print("sa: ");
-      Serial.println(hdr->sa, HEX);
-      Serial.print("bssid: ");
-      Serial.println(hdr->bssid, HEX);
-      Serial.print("seqctl: ");
-      Serial.println(hdr->seqctl);
-      Serial.println();
+    } else {
+      
     }
 
     buffer_obj.addPacket((uint8_t*)snifferPacket, len);
@@ -97,6 +81,7 @@ public:
     esp_wifi_set_promiscuous_filter(&filt);
     esp_wifi_set_promiscuous_rx_cb(&rawSnifferCallback);
     esp_wifi_set_channel(Channel, WIFI_SECOND_CHAN_NONE);
+    Serial.println("Handshake Scan Started");
   }
 
   void broadcastSetSSID(const char* ESSID) {

@@ -3,6 +3,7 @@
 #include <DNSServer.h>
 #include <AsyncTCP.h>
 #include "CommandLine.h"
+#include "WiFiTools.h"
 #include <WiFiManager.h>
 
 #define MAX_HTML_SIZE 20000
@@ -72,6 +73,7 @@ public:
         }
       } else if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
         Serial.println("reset Tag Found Rebooting");
+        buffer_obj.forceSaveSerial();
         delay(1000);
         esp_restart();
       } else {

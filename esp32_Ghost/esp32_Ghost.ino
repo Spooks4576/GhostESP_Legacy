@@ -105,19 +105,16 @@ void setup() {
   led.RunSetup();
 
   xTaskCreatePinnedToCore(LoopTask,"LoopTask",20000,NULL,1,NULL,1);
-
-  //Serial1.begin(115200);
 }
 
 Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
-//Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
+Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
 Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd4("RickRollSpam", "Spam Access Points With a Rick Roll", BeaconSpamRickRoll);
-const int numCommands = 5;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5};
-
+const int numCommands = 6;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
 CommandLine commandli(commands, numCommands);
 
 void loop() {

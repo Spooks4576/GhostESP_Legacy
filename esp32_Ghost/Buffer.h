@@ -3,6 +3,8 @@
 #include <SD.h>
 #include <Arduino.h>
 
+#define ESPS2
+
 #define BUF_SIZE 3 * 1024
 #define SNAP_LEN 2324
 #define SD_CS 10
@@ -16,6 +18,7 @@ public:
   }
 
   bool InitSD(String file_name) {
+
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
@@ -27,7 +30,11 @@ public:
       Serial.println(F("Mounted SD Card"));
       CreatePcap(&SD, file_name);
       open();
+      return true;
     }
+
+
+    return false;
   }
 
   void CreatePcap(fs::FS* fs, String fn = "") {
@@ -60,6 +67,7 @@ public:
 
   void addPacket(uint8_t* buf, uint32_t len) {
     if ((useA && bufSizeA + len >= BUF_SIZE && bufSizeB > 0) || (!useA && bufSizeB + len >= BUF_SIZE && bufSizeA > 0)) {
+      forceSaveSerial();
       return;
     }
 
