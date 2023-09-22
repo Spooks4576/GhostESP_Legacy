@@ -13,6 +13,7 @@ EvilPortal Portal;
 WiFiTools wifi;
 
 
+
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
 
@@ -31,6 +32,13 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
 void StartEvilPortal()
 {
   Portal.begin();
+}
+
+void StartHandShakeScan(const char* Channel)
+{
+  int value = atoi(Channel);
+
+  wifi.RunRawScan(value);
 }
 
 void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
@@ -97,9 +105,12 @@ void setup() {
   led.RunSetup();
 
   xTaskCreatePinnedToCore(LoopTask,"LoopTask",10000,NULL,1,NULL,1);
+
+  //Serial1.begin(115200);
 }
 
 Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
+//Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
 Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);

@@ -6,7 +6,6 @@
 #include <WiFiManager.h>
 
 #define MAX_HTML_SIZE 20000
-#define SD_CS 10
 
 WiFiManager wifiManager;
 
@@ -22,7 +21,7 @@ String readSerialBuffer(bool &isHtml, bool &isAp) {
 
 class EvilPortal {
 private:
-  char ssid[100] = "Free WiFi";
+  char ssid[100] = "";
   const char *password;
   String accumulatedHTML = "";
   bool has_html = false;
