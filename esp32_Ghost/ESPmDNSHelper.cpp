@@ -127,7 +127,7 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
           SendAuth();
           break;
         }
-      } else if (serviceIP.toString() == "192.168.1.165") {
+      } else {
         if (initializeClient(serviceIP.toString().c_str(), servicePort)) {
           SendAuth();
         }
