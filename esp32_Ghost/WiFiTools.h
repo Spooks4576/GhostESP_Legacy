@@ -4,13 +4,13 @@
 #include "Buffer.h"
 
 const char* rick_roll[8] = {
-  F("Never gonna give you up"),
-  F("Never gonna let you down"),
-  F("Never gonna run around"),
-  F("and desert you"),
-  F("Never gonna make you cry"),
-  F("Never gonna say goodbye"),
-  F("Never gonna tell a lie"),
+  "Never gonna give you up",
+  "Never gonna let you down",
+  "Never gonna run around",
+  "and desert you",
+  "Never gonna make you cry",
+  "Never gonna say goodbye",
+  "Never gonna tell a lie",
   "and hurt you"
 };
 
@@ -60,7 +60,7 @@ public:
       const wifi_ieee80211_packet_t* ipkt = (wifi_ieee80211_packet_t*)snifferPacket->payload;
       const WifiMgmtHdr* hdr = &ipkt->hdr;
     } else {
-
+      
     }
 
     buffer_obj.addPacket((uint8_t*)snifferPacket, len);

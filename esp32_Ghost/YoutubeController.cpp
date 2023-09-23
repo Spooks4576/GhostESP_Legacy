@@ -15,14 +15,14 @@ void YoutubeController::launchApp(const String& appUrl) {
   httpc.beginRequest();
 
   int httpCode = httpc.post(youtubePath);
-  httpc.sendHeader(F("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36"));
+  httpc.sendHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
   httpc.sendHeader("Origin", "https://www.youtube.com");
   httpc.endRequest();
 
   if (httpCode == 201) {
-    Serial.println(F("Successfully launched the YouTube app."));
+    Serial.println("Successfully launched the YouTube app.");
   } else {
-    Serial.println(F("Failed to launch the YouTube app. HTTP Response Code: ") + String(httpCode));
+    Serial.println("Failed to launch the YouTube app. HTTP Response Code: " + String(httpCode));
   }
 }
 
@@ -42,7 +42,7 @@ int YoutubeController::checkAppStatus(const String& appUrl, Device& device_I) {
     httpc.beginRequest();
 
     int resultCode = httpc.get(youtubePath);
-    httpc.sendHeader(F("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36"));
+    httpc.sendHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
     httpc.sendHeader("Origin", "https://www.youtube.com");
     httpc.endRequest();
 
@@ -72,11 +72,11 @@ int YoutubeController::checkAppStatus(const String& appUrl, Device& device_I) {
             Serial.println("YouTube app is not running.");
             return responseCode;
         } else {
-            Serial.println(F("Received unexpected HTTP Response Code: ") + String(responseCode));
+            Serial.println("Received unexpected HTTP Response Code: " + String(responseCode));
             return responseCode;
         }
     } else {
-        Serial.println(F("Failed to establish a connection or send the request. Result code: ") + String(resultCode));
+        Serial.println("Failed to establish a connection or send the request. Result code: " + String(resultCode));
         return resultCode;
     }
 }

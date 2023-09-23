@@ -34,12 +34,12 @@ public:
 
   void begin() {
     if (!wifiManager.startConfigPortal(ssid, NULL, HTML)) {
-      Serial.println(F("failed to connect and hit timeout"));
+      Serial.println("failed to connect and hit timeout");
       delay(3000);
       return;
     }
 
-    Serial.printf(F("Evil Portal Started at %s"), WiFi.softAPIP().toString().c_str());
+    Serial.printf("Evil Portal Started at %s", WiFi.softAPIP().toString().c_str());
   }
 
   void loop(CommandLine CLI) {
@@ -72,12 +72,12 @@ public:
           begin();
         }
       } else if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
-        Serial.println(F("reset Tag Found Rebooting"));
+        Serial.println("reset Tag Found Rebooting");
         buffer_obj.forceSaveSerial();
         delay(1000);
         esp_restart();
       } else {
-        Serial.println(F("Regular Command Called"));
+        Serial.println("Regular Command Called");
         CLI.loop(flipperMessage);
       }
     }

@@ -148,12 +148,12 @@ public:
         onMessage(sourceId, destinationId, namespace_, jsonData);
 
         if (jsonData != "") {
-          Serial.println(F("Deserialized data: ") + jsonData);
+          Serial.println("Deserialized data: " + jsonData);
         } else {
-          Serial.println(F("Failed to deserialize data or received empty response."));
+          Serial.println("Failed to deserialize data or received empty response.");
         }
       } else {
-        Serial.println(F("Received data length is not appropriate."));
+        Serial.println("Received data length is not appropriate.");
       }
     }
   }
@@ -162,10 +162,10 @@ public:
   void onMessage(String srcId, String destId, String ns, String data) {
     // Check if the data is a valid session ID first
     if (data != "" && isValidSessionId(data)) {
-      Serial.println(F("Session ID: ") + data);
-      Serial.println(F("About to Do Message Callback"));
+      Serial.println("Session ID: " + data);
+      Serial.println("About to Do Message Callback");
       Parent->HandleMessage(data, data);
-      Serial.println(F("Finished Callback Call"));
+      Serial.println("Finished Callback Call");
     }
 
     else if (data != "") {
@@ -206,10 +206,10 @@ public:
         delete YtController;
 
       } else {
-        Serial.println(F("Other valid data received: ") + data);
+        Serial.println("Other valid data received: " + data);
       }
     } else {
-      Serial.println(F("deviceId not found in nested JSON"));
+      Serial.println("deviceId not found in nested JSON");
     }
   }
 
