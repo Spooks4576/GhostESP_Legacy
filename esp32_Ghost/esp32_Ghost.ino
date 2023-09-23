@@ -62,7 +62,6 @@ void BeaconSpamRickRoll()
 {
   Serial.println("Spamming Rick Roll");
 
-  WiFi.mode(WIFI_MODE_AP);
   esp_wifi_start();
 
   led.TurnPurple();
