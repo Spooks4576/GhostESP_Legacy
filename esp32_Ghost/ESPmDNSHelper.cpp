@@ -53,7 +53,7 @@ void LoadMedia(Channel MediaChannel, String contentId, String contentType, Strin
 }
 
 void ESPmDNSHelper::HandleCloseConnection() {
-  Channel ConnectChannel(SSLClient, "sender-0", CurrentSessionID, "urn:x-cast:com.google.cast.tp.connection", "JSON", this);
+  Channel ConnectChannel(SSLClient, "sender-0", CurrentSessionID, F("urn:x-cast:com.google.cast.tp.connection"), "JSON", this);
 
   StaticJsonDocument<200> doc2;
   String CloseString;
@@ -69,8 +69,8 @@ void ESPmDNSHelper::HandleMessage(String Session, String Data) {
 
     CurrentSessionID = Session;
 
-    Channel ConnectChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.cast.tp.connection", "JSON", this);
-    Channel MediaChannel(SSLClient, "sender-0", Session, "urn:x-cast:com.google.youtube.mdx", "JSON", this);
+    Channel ConnectChannel(SSLClient, "sender-0", Session, F("urn:x-cast:com.google.cast.tp.connection"), "JSON", this);
+    Channel MediaChannel(SSLClient, "sender-0", Session, F("urn:x-cast:com.google.youtube.mdx"), "JSON", this);
 
     StaticJsonDocument<200> doc1;
 
@@ -117,9 +117,9 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
       IPAddress serviceIP = mdns->IP(i);
       uint16_t servicePort = mdns->port(i);
 
-      Serial.println("Service Name: " + serviceName);
-      Serial.println("Service IP: " + serviceIP.toString());
-      Serial.println("Service Port: " + String(servicePort));
+      Serial.println(F("Service Name: ") + serviceName);
+      Serial.println(F("Service IP: ") + serviceIP.toString());
+      Serial.println(F("Service Port: ") + String(servicePort));
       Serial.println("----------------------------");
 
       if (TargetIP != "") {
@@ -138,13 +138,13 @@ void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, ui
 }
 
 void ESPmDNSHelper::connectWiFi() {
-  Serial.println("[connectWiFi] Initiating WiFi connection.");
+  Serial.println(F("[connectWiFi] Initiating WiFi connection."));
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("[connectWiFi] Connecting to WiFi...");
+    Serial.println(F("[connectWiFi] Connecting to WiFi..."));
   }
-  Serial.println("[connectWiFi] Connected to WiFi.");
+  Serial.println(F("[connectWiFi] Connected to WiFi."));
 
   if (initialize("ESP32S2-Device")) {
     queryServices("_googlecast", "_tcp", 2000);
@@ -152,9 +152,9 @@ void ESPmDNSHelper::connectWiFi() {
 }
 
 void ESPmDNSHelper::SendAuth() {
-  Channel ConnectChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection", "JSON", this);
-  Channel HeartBeat(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat", "JSON", this);
-  Channel RecieverChannel(SSLClient, "sender-0", "receiver-0", "urn:x-cast:com.google.cast.receiver", "JSON", this);
+  Channel ConnectChannel(SSLClient, "sender-0", "receiver-0", F("urn:x-cast:com.google.cast.tp.connection"), "JSON", this);
+  Channel HeartBeat(SSLClient, "sender-0", "receiver-0", F("urn:x-cast:com.google.cast.tp.heartbeat"), "JSON", this);
+  Channel RecieverChannel(SSLClient, "sender-0", "receiver-0", F("urn:x-cast:com.google.cast.receiver"), "JSON", this);
   StaticJsonDocument<200> Heartbeatdoc;
 
   Heartbeatdoc["type"] = "PING";
@@ -213,7 +213,7 @@ void ESPmDNSHelper::SendAuth() {
     delay(700);
   }
 
-  Serial.println("Finished checking for messages.");
+  Serial.println(F("Finished checking for messages."));
 }
 
 
@@ -238,7 +238,7 @@ bool ESPmDNSHelper::initializeClient(const char* _host, uint16_t _port) {
 
     return true;
   } else {
-    Serial.println("Failed to connect securely. Entirely");
+    Serial.println(F("Failed to connect securely. Entirely"));
     return false;
   }
 }

@@ -5,13 +5,21 @@
 #include "ESPmDNSHelper.h"
 #include "WiFiTools.h"
 #include "EvilPortal.h"
-
+#include "Devices.h"
 #include "Dial.h"
+
+#ifdef SUPPORTSBT
+
+#include "BLESpam.h"
+
+#endif
+
+
 
 flipperLED led;
 EvilPortal Portal;
 WiFiTools wifi;
-
+BLESpam bt;
 
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
@@ -58,6 +66,18 @@ void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL
   delete CCTargeter;
 }
 
+void AppleBLESpam()
+{
+
+#ifdef SUPPORTSBT
+
+  led.TurnPurple();
+
+  bt.AppleBLESpamInit();
+
+#endif
+}
+
 void BeaconSpamRickRoll()
 {
   Serial.println("Spamming Rick Roll");
@@ -100,21 +120,22 @@ void setup() {
   Serial.begin(115200);
 
 
-  Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
-  Serial.println("Welcome to Ghost ESP Made by Spooky");
+  Serial.println(F("ESP-IDF version is: ") + String(esp_get_idf_version()));
+  Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
   led.RunSetup();
 
   xTaskCreatePinnedToCore(LoopTask,"LoopTask",20000,NULL,1,NULL,1);
 }
 
-Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
-Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
-Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
-Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
-Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
-Command<> cmd4("RickRollSpam", "Spam Access Points With a Rick Roll", BeaconSpamRickRoll);
-const int numCommands = 6;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
+Command<const char*, const char*, const char*, const char*> cmd5(F("ChromeConnectYT"), F("Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>"), YTChromeConnectToTarget);
+Command<const char*> cmd6(F("HandShakeScan"), F("Scan for a 4 way handshake on a specific Channel"), StartHandShakeScan);
+Command<> cmd7(F("AppleTVSpam"), F("Spam IOS Devices With a Apple TV Popup"), AppleBLESpam);
+Command<const char*, const char*, const char*> cmd1(F("YTVConnect"), F("Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>"), YTConnect);
+Command<const char*, const char*> cmd2(F("RickRollTV"), F("Rickroll a TV. Usage: RickRollTV <SSID> <Password>"), RickRollTV);
+Command<const char*, const char*, const char*> cmd3(F("ChromeConnectEZYT"), F("Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>"), YTChromeConnectEasy);
+Command<> cmd4(F("RickRollSpam"), F("Spam Access Points With a Rick Roll"), BeaconSpamRickRoll);
+const int numCommands = 7;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
 CommandLine commandli(commands, numCommands);
 
 void loop() {

@@ -36,7 +36,7 @@ public:
   void sendHeaders(const char* serverAddress, const String& endpoint, const String& data, const String& URLParams, const char* contentType) {
     secureClient.print("POST " + String(endpoint) + "?" + URLParams + " HTTP/1.1\r\n");
     secureClient.print("Host: " + String(serverAddress) + "\r\n");
-    secureClient.print("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n");
+    secureClient.print(F("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36\r\n"));
     secureClient.print("Content-Type: " + String(contentType) + "\r\n");
     secureClient.print("Content-Length: " + String(data.length()) + "\r\n");
     secureClient.print("Origin: https://www.youtube.com\r\n");
