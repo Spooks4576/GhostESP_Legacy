@@ -62,6 +62,13 @@ void BeaconSpamRickRoll()
 {
   Serial.println("Spamming Rick Roll");
 
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  wifi_config_t ap_config;
+
+  esp_wifi_init(&cfg);
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  esp_wifi_set_mode(WIFI_MODE_AP);
+  esp_wifi_set_config(WIFI_IF_AP, &ap_config);
   esp_wifi_start();
 
   led.TurnPurple();
