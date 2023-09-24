@@ -64,6 +64,9 @@ void BeaconSpamRickRoll()
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   wifi_config_t ap_config;
+  ap_config.ap.ssid_hidden = 1;
+  ap_config.ap.beacon_interval = 10000;
+  ap_config.ap.ssid_len = 0;
 
   esp_wifi_init(&cfg);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
