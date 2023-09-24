@@ -74,6 +74,9 @@ void BeaconSpamRickRoll()
   esp_wifi_set_config(WIFI_IF_AP, &ap_config);
   esp_wifi_start();
 
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_max_tx_power(82);
+
   led.TurnPurple();
 
   while (true)
