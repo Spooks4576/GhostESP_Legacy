@@ -150,10 +150,10 @@ public:
         if (jsonData != "") {
           Serial.println("Deserialized data: " + jsonData);
         } else {
-          Serial.println("Failed to deserialize data or received empty response.");
+          Serial.println(F("Failed to deserialize data or received empty response."));
         }
       } else {
-        Serial.println("Received data length is not appropriate.");
+        Serial.println(F("Received data length is not appropriate."));
       }
     }
   }
@@ -209,7 +209,7 @@ public:
         Serial.println("Other valid data received: " + data);
       }
     } else {
-      Serial.println("deviceId not found in nested JSON");
+      Serial.println(F("deviceId not found in nested JSON"));
     }
   }
 

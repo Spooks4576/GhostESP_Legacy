@@ -100,7 +100,7 @@ void setup() {
 
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
-  Serial.println("Welcome to Ghost ESP Made by Spooky");
+  Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
   led.RunSetup();
 
   xTaskCreatePinnedToCore(LoopTask,"LoopTask",20000,NULL,1,NULL,1);

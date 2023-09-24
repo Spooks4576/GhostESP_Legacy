@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "Buffer.h"
 
-const char* rick_roll[8] = {
+const char* rick_roll[8] PROGMEM = {
   "Never gonna give you up",
   "Never gonna let you down",
   "Never gonna run around",
@@ -81,7 +81,7 @@ public:
     esp_wifi_set_promiscuous_filter(&filt);
     esp_wifi_set_promiscuous_rx_cb(&rawSnifferCallback);
     esp_wifi_set_channel(Channel, WIFI_SECOND_CHAN_NONE);
-    Serial.println("Handshake Scan Started");
+    Serial.println(F("Handshake Scan Started"));
   }
 
   void broadcastSetSSID(const char* ESSID) {

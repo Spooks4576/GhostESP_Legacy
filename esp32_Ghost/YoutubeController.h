@@ -14,20 +14,20 @@ public:
 
     int startIndex = xmlData.indexOf(startTag);
     if (startIndex == -1) {
-      Serial.println("Start tag not found.");
+      Serial.println(F("Start tag not found."));
       return "";
     }
     startIndex += startTag.length();
 
     int endIndex = xmlData.indexOf(endTag, startIndex);
     if (endIndex == -1) {
-      Serial.println("End tag not found.");
+      Serial.println(F("End tag not found."));
       return "";
     }
 
     String extractedId = xmlData.substring(startIndex, endIndex);
     if (extractedId.length() == 0) {
-      Serial.println("Extracted screenId is empty.");
+      Serial.println(F("Extracted screenId is empty."));
       return "";
     }
 

@@ -98,7 +98,7 @@ inline DeserializationResult deserialize(const uint8_t* buffer, uint16_t length,
 
     return ExpandedCastMessageSerializer::DESERIALIZATION_SUCCESS;
   } else {
-    Serial.println("Failed to identify complete JSON payload or sessionId within buffer");
+    Serial.println(F("Failed to identify complete JSON payload or sessionId within buffer"));
     return ExpandedCastMessageSerializer::INVALID_FORMAT;
   }
 }

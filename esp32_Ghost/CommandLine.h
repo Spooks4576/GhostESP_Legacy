@@ -185,7 +185,7 @@ public:
           return true;
         }
       }
-      Serial.println("Unknown command. Type 'help' for a list of commands.");
+      Serial.println(F("Unknown command. Type 'help' for a list of commands."));
       return false;
     }
   }

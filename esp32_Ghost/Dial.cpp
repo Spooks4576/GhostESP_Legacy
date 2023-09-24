@@ -38,7 +38,7 @@ bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& 
     }
   }
 
-  Serial.println("Failed to fetch Screen ID after max retries.");
+  Serial.println(F("Failed to fetch Screen ID after max retries."));
   return false;
 }
 
@@ -129,7 +129,7 @@ std::vector<Device> DIALClient::discoverDevices() {
 
 
   if (devices.empty()) {
-    Serial.println("[discoverDevices] No devices found after all retries.");
+    Serial.println(F("[discoverDevices] No devices found after all retries."));
   }
 
   return devices;
@@ -145,7 +145,7 @@ void DIALClient::exploreNetwork() {
     std::vector<Device> devices = discoverDevices();
 
     if (devices.empty()) {
-      Serial.println("No devices discovered. Retrying...");
+      Serial.println(F("No devices discovered. Retrying..."));
       continue;
     }
 
@@ -162,7 +162,7 @@ void DIALClient::exploreNetwork() {
       if (!device.applicationUrl.isEmpty()) {
         if (YTHandler != nullptr) {
           if (appHandler->checkAppStatus(device.applicationUrl, device) != 200) {
-            Serial.println("Launching Youtube App");
+            Serial.println(F("Launching Youtube App"));
             appHandler->launchApp(device.applicationUrl);
           }
 
@@ -195,7 +195,7 @@ void DIALClient::exploreNetwork() {
 
 
 bool DIALClient::parseSSDPResponse(const String& response, Device& device) {
-  Serial.println("[parseSSDPResponse] Parsing SSDP response.");
+  Serial.println(F("[parseSSDPResponse] Parsing SSDP response."));
 
   if (response.length() == 0) {
     return false;
@@ -287,7 +287,7 @@ String DIALClient::getDialApplicationUrl(const String& locationUrl) {
   httpc.beginRequest();
   int getcode = httpc.get(path);
   httpc.sendHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
-  httpc.sendHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
+  httpc.sendHeader("User-Agent", UserAgent.c_str());
   httpc.sendHeader("Content-Type", "text/xml; charset=\"utf-8\"");
   httpc.endRequest();
 
@@ -299,7 +299,7 @@ String DIALClient::getDialApplicationUrl(const String& locationUrl) {
     if (!appUrl.isEmpty()) {
       Serial.println("[getDialApplicationUrl] Application-URL: " + appUrl);
     } else {
-      Serial.println("[getDialApplicationUrl] Couldn't find Application-URL in the headers.");
+      Serial.println(F("[getDialApplicationUrl] Couldn't find Application-URL in the headers."));
     }
     return appUrl;
   } else {

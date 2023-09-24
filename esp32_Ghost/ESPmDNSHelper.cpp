@@ -101,7 +101,7 @@ ESPmDNSHelper::~ESPmDNSHelper() {
 
 bool ESPmDNSHelper::initialize(const char* hostName) {
   if (mdns->begin(hostName)) {
-    Serial.println("MDNS responder started");
+    Serial.println(F("MDNS responder started"));
     return true;
   }
   return false;
@@ -110,7 +110,7 @@ bool ESPmDNSHelper::initialize(const char* hostName) {
 void ESPmDNSHelper::queryServices(const char* serviceType, const char* proto, uint32_t timeout) {
   int n = mdns->queryService(serviceType, proto);
   if (n == 0) {
-    Serial.println("no services found");
+    Serial.println(F("no services found"));
   } else {
     for (int i = 0; i < n; ++i) {
       String serviceName = mdns->hostname(i);
@@ -142,9 +142,9 @@ void ESPmDNSHelper::connectWiFi() {
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("[connectWiFi] Connecting to WiFi...");
+    Serial.println(F("[connectWiFi] Connecting to WiFi..."));
   }
-  Serial.println("[connectWiFi] Connected to WiFi.");
+  Serial.println(F("[connectWiFi] Connected to WiFi."));
 
   if (initialize("ESP32S2-Device")) {
     queryServices("_googlecast", "_tcp", 2000);
@@ -213,7 +213,7 @@ void ESPmDNSHelper::SendAuth() {
     delay(700);
   }
 
-  Serial.println("Finished checking for messages.");
+  Serial.println(F("Finished checking for messages."));
 }
 
 
@@ -238,7 +238,7 @@ bool ESPmDNSHelper::initializeClient(const char* _host, uint16_t _port) {
 
     return true;
   } else {
-    Serial.println("Failed to connect securely. Entirely");
+    Serial.println(F("Failed to connect securely. Entirely"));
     return false;
   }
 }
