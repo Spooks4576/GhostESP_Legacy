@@ -4,6 +4,13 @@
 #include "IRemoteService.h"
 #include <Arduino.h>
 
+enum class HandlerType {
+    Base,
+    YoutubeController,
+    NetflixController,
+    RokuController
+};
+
 inline String UserAgent = F("Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36");
 
 class AppController {
@@ -16,6 +23,8 @@ public:
 
 
   virtual void launchApp(const String& appUrl) = 0;
+
+  virtual HandlerType getType() const { return HandlerType::Base; }
 
 
   virtual int checkAppStatus(const String& appUrl, Device& device) = 0;

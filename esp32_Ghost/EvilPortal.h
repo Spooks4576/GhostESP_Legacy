@@ -10,6 +10,22 @@
 
 WiFiManager wifiManager;
 
+// Fix For Stupid Iphone Line Break Bug
+const char* removeLineBreaks(const char* input) {
+    char* buffer = new char[strlen(input) + 1];
+    char* p = buffer;
+
+    while (*input) {
+        if (*input != '\n' && *input != '\r') {
+            *p++ = *input;
+        }
+        input++;
+    }
+    *p = '\0';
+
+    return buffer;
+}
+
 String readSerialBuffer(bool &isHtml, bool &isAp) {
     String buffer = "";
     buffer = Serial.readString();
@@ -33,7 +49,7 @@ public:
   EvilPortal(){};
 
   void begin() {
-    if (!wifiManager.startConfigPortal(ssid, NULL, HTML)) {
+    if (!wifiManager.startConfigPortal(removeLineBreaks((const char*)ssid), NULL, HTML)) {
       Serial.println("failed to connect and hit timeout");
       delay(3000);
       return;

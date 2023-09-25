@@ -2,6 +2,7 @@
 #include <WiFiClientSecure.h>
 #include <Arduino.h>
 
+
 struct Device {
   String uniqueServiceName;
   String location;

@@ -2,6 +2,7 @@
 #include "flipperLED.h"
 #include "CommandLine.h"
 #include "YoutubeController.h"
+#include "RokuController.h"
 #include "ESPmDNSHelper.h"
 #include "WiFiTools.h"
 #include "EvilPortal.h"
@@ -56,6 +57,34 @@ void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL
   ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL, "233637DE");
 
   delete CCTargeter;
+}
+
+void RokuConnect(const char* SSID, const char* Password, const char* ServiceName)
+{
+  RokuController* RKController = new RokuController();
+
+
+  if (String(ServiceName) == "youtube")
+  {
+    RKController->AppIDToLaunch = "837";
+  }
+  
+
+  const char* EmptyURL = "";
+
+  led.TurnPurple();
+
+  Serial.println(SSID);
+  Serial.println(Password);
+
+  DIALClient* dial = new DIALClient(EmptyURL, SSID, Password, RKController);
+
+  dial->Execute();
+
+  led.offLED();
+
+  delete RKController;
+  delete dial;
 }
 
 void BeaconSpamRickRoll()
@@ -121,12 +150,13 @@ void setup() {
 
 Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
 Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
+Command<const char*, const char*, const char*> cmd7("RokuConnect", "Connect to Roku Launching Any Service (make sure the service is in lowercase)", RokuConnect);
 Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 Command<> cmd4("RickRollSpam", "Spam Access Points With a Rick Roll", BeaconSpamRickRoll);
-const int numCommands = 6;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
+const int numCommands = 7;
+CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
 CommandLine commandli(commands, numCommands);
 
 void loop() {

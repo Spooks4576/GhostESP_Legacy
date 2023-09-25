@@ -2,6 +2,7 @@
 #include "AppController.h"
 #include "NetflixController.h"
 #include "YoutubeController.h"
+#include "RokuController.h"
 #include <ArduinoHttpClient.h>
 #include <set>
 #include <vector>

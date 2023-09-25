@@ -4,23 +4,23 @@ const int MAX_RETRIES = 50;
 const int RETRY_DELAY = 500;
 
 String extractPathFromURL(const String& url) {
-    int doubleSlashPos = url.indexOf("//");
-    
-   
-    if (doubleSlashPos == -1) {
-        doubleSlashPos = 0;
-    } else {
-        doubleSlashPos += 2;
-    }
+  int doubleSlashPos = url.indexOf("//");
 
-    int slashAfterHost = url.indexOf('/', doubleSlashPos);
 
-    
-    if (slashAfterHost == -1) {
-        return "/";
-    }
+  if (doubleSlashPos == -1) {
+    doubleSlashPos = 0;
+  } else {
+    doubleSlashPos += 2;
+  }
 
-    return url.substring(slashAfterHost);
+  int slashAfterHost = url.indexOf('/', doubleSlashPos);
+
+
+  if (slashAfterHost == -1) {
+    return "/";
+  }
+
+  return url.substring(slashAfterHost);
 }
 
 bool DIALClient::fetchScreenIdWithRetries(const String& applicationUrl, Device& device, YoutubeController* YTController) {
@@ -52,9 +52,8 @@ void DIALClient::connectWiFi() {
   }
   Serial.println("[connectWiFi] Connected to WiFi.");
 
-  YoutubeController* YTHandler = static_cast<YoutubeController*>(appHandler);
-
-  if (YTHandler != nullptr) {
+  if (appHandler->getType() == HandlerType::YoutubeController) {
+    YoutubeController* YTHandler = static_cast<YoutubeController*>(appHandler);
     YTHandler->YTService.secureClient.setInsecure();
   }
 
@@ -157,10 +156,9 @@ void DIALClient::exploreNetwork() {
 
       device.applicationUrl = getDialApplicationUrl(device.location);
 
-      YoutubeController* YTHandler = static_cast<YoutubeController*>(appHandler);
-
       if (!device.applicationUrl.isEmpty()) {
-        if (YTHandler != nullptr) {
+        if (appHandler->getType() == HandlerType::YoutubeController) {
+          YoutubeController* YTHandler = static_cast<YoutubeController*>(appHandler);
           if (appHandler->checkAppStatus(device.applicationUrl, device) != 200) {
             Serial.println(F("Launching Youtube App"));
             appHandler->launchApp(device.applicationUrl);
@@ -184,10 +182,28 @@ void DIALClient::exploreNetwork() {
           } else {
             Serial.println("Timeout reached. YouTube app is not running.");
           }
-        } else {
+        } else if (appHandler->getType() == HandlerType::RokuController) {
+          RokuController* RKHandler = static_cast<RokuController*>(appHandler);
+
+          if (RKHandler->isRokuDevice(device.applicationUrl.c_str())) {
+            unsigned long startTime = millis();
+            bool KeySpam = false;
+
+            if (KeySpam) {
+              while (millis() - startTime < 10000) {
+                RKHandler->ExecuteKeyCommand(RokuKeyPress_HOME, device.applicationUrl.c_str());
+              }
+            }
+            else 
+            {
+              RKHandler->launchApp(device.applicationUrl.c_str());
+            }
+          }
+        } else if (appHandler->getType() == HandlerType::NetflixController) {
           Serial.println("Launching App");
           appHandler->launchApp(device.applicationUrl);
         }
+        Serial.println(device.uniqueServiceName);
       }
     }
   }
