@@ -187,11 +187,12 @@ void DIALClient::exploreNetwork() {
 
           if (RKHandler->isRokuDevice(device.applicationUrl.c_str())) {
             unsigned long startTime = millis();
-            bool KeySpam = false;
+            bool KeySpam = ShouldRokuKeySpam;
 
             if (KeySpam) {
-              while (millis() - startTime < 10000) {
+              while (millis() - startTime < 15000) { 
                 RKHandler->ExecuteKeyCommand(RokuKeyPress_HOME, device.applicationUrl.c_str());
+                delay(100);
               }
             }
             else 

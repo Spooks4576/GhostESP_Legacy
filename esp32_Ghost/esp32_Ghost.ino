@@ -4,16 +4,12 @@
 #include "YoutubeController.h"
 #include "RokuController.h"
 #include "ESPmDNSHelper.h"
-#include "WiFiTools.h"
 #include "EvilPortal.h"
 
 #include "Dial.h"
 
 flipperLED led;
 EvilPortal Portal;
-WiFiTools wifi;
-
-
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
@@ -30,45 +26,27 @@ void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   delete dial;
 }
 
-void StartEvilPortal()
-{
+void StartEvilPortal() {
   Portal.begin();
 }
 
-void StartHandShakeScan(const char* Channel)
-{
-  int value = atoi(Channel);
 
-  wifi.RunRawScan(value);
-}
-
-void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL)
-{
+void YTChromeConnectToTarget(const char* SSID, const char* Password, const char* DeviceTarget, const char* URL) {
   led.TurnPurple();
   ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, DeviceTarget, URL, "233637DE");
 
   delete CCTargeter;
-
 }
 
-void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL)
-{
+void YTChromeConnectEasy(const char* SSID, const char* Password, const char* URL) {
   led.TurnPurple();
   ESPmDNSHelper* CCTargeter = new ESPmDNSHelper(SSID, Password, "", URL, "233637DE");
 
   delete CCTargeter;
 }
 
-void RokuConnect(const char* SSID, const char* Password, const char* ServiceName)
-{
+void RokuKeySpam(const char* SSID, const char* Password) {
   RokuController* RKController = new RokuController();
-
-
-  if (String(ServiceName) == "youtube")
-  {
-    RKController->AppIDToLaunch = "837";
-  }
-  
 
   const char* EmptyURL = "";
 
@@ -79,6 +57,8 @@ void RokuConnect(const char* SSID, const char* Password, const char* ServiceName
 
   DIALClient* dial = new DIALClient(EmptyURL, SSID, Password, RKController);
 
+  dial->ShouldRokuKeySpam = true;
+
   dial->Execute();
 
   led.offLED();
@@ -87,34 +67,32 @@ void RokuConnect(const char* SSID, const char* Password, const char* ServiceName
   delete dial;
 }
 
-void BeaconSpamRickRoll()
-{
-  Serial.println("Spamming Rick Roll");
+void RokuConnect(const char* SSID, const char* Password, const char* ServiceName) {
+  RokuController* RKController = new RokuController();
 
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  wifi_config_t ap_config;
-  ap_config.ap.ssid_hidden = 1;
-  ap_config.ap.beacon_interval = 10000;
-  ap_config.ap.ssid_len = 0;
 
-  esp_wifi_init(&cfg);
-  esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_AP);
-  esp_wifi_set_config(WIFI_IF_AP, &ap_config);
-  esp_wifi_start();
+  if (String(ServiceName) == "youtube") {
+    RKController->AppIDToLaunch = "837";
+  }
 
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_max_tx_power(82);
+
+  const char* EmptyURL = "";
 
   led.TurnPurple();
 
-  while (true)
-  {
-    for (int x = 0; x < (sizeof(rick_roll)/sizeof(char *)); x++)
-    {
-      wifi.broadcastSetSSID(rick_roll[x]);
-    }
-  }
+  Serial.println(SSID);
+  Serial.println(Password);
+
+  DIALClient* dial = new DIALClient(EmptyURL, SSID, Password, RKController);
+
+  dial->ShouldRokuKeySpam = false;
+
+  dial->Execute();
+
+  led.offLED();
+
+  delete RKController;
+  delete dial;
 }
 
 void RickRollTV(const char* SSID, const char* Password) {
@@ -137,6 +115,30 @@ void RickRollTV(const char* SSID, const char* Password) {
   delete dial;
 }
 
+Command<const char*, const char*, const char*, const char*> cmd4("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
+Command<const char*, const char*, const char*> cmd5("RokuConnect", "Connect to Roku Launching Any Service (make sure the service is in lowercase) <SSID> <PASSWORD> <Service>", RokuConnect);
+Command<const char*, const char*> cmd6("RokuKeySpam", "More Annoying than Anything. (Args <SSID> <PASSWORD>", RokuKeySpam);
+Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
+Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
+Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
+const int numCommands = 6;
+CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
+CommandLine commandli(commands, numCommands);
+
+void loop() {
+  Portal.loop(commandli);
+  delay(100);
+}
+
+void LoopTask(void* parameter) {
+  while (true) {
+    if (ShouldMultithread) {
+      Portal.loop(commandli);
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);  // Run every second
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -145,31 +147,5 @@ void setup() {
   Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
   led.RunSetup();
 
-  xTaskCreatePinnedToCore(LoopTask,"LoopTask",20000,NULL,1,NULL,1);
-}
-
-Command<const char*, const char*, const char*, const char*> cmd5("ChromeConnectYT", "Connect using YTChrome With Target. Usage: YTChromeConnect <SSID> <Password> <DeviceTarget> <ID>", YTChromeConnectToTarget);
-Command<const char*> cmd6("HandShakeScan", "Scan for a 4 way handshake on a specific Channel", StartHandShakeScan);
-Command<const char*, const char*, const char*> cmd7("RokuConnect", "Connect to Roku Launching Any Service (make sure the service is in lowercase)", RokuConnect);
-Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
-Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
-Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
-Command<> cmd4("RickRollSpam", "Spam Access Points With a Rick Roll", BeaconSpamRickRoll);
-const int numCommands = 7;
-CommandBase* commands[MAX_COMMANDS] = {&cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7};
-CommandLine commandli(commands, numCommands);
-
-void loop() {
-  Portal.loop(commandli);
-  delay(100);
-}
-
-void LoopTask(void *parameter) {
-    while (true) {
-      if (ShouldMultithread)
-      {
-        Portal.loop(commandli);
-      }
-      vTaskDelay(1000 / portTICK_PERIOD_MS);  // Run every second
-    }
+  xTaskCreatePinnedToCore(LoopTask, "LoopTask", 20000, NULL, 1, NULL, 1);
 }

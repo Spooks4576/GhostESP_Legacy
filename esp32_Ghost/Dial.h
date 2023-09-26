@@ -20,8 +20,9 @@ public:
     bool parseSSDPResponse(const String& response, Device& device);
     String extractApplicationURL(HttpClient &httpc);
     bool fetchScreenIdWithRetries(const String& applicationUrl, Device& device, YoutubeController* YTController);
-private:
+public:
     String ssid, password, YTurl;
     AppController* appHandler;
     WiFiUDP multicastClient;
+    bool ShouldRokuKeySpam;
 };
