@@ -192,7 +192,7 @@ void DIALClient::exploreNetwork() {
             if (KeySpam) {
               while (millis() - startTime < 15000) { 
                 RKHandler->ExecuteKeyCommand(RokuKeyPress_HOME, device.applicationUrl.c_str());
-                delay(100);
+                delay(50);
               }
             }
             else 

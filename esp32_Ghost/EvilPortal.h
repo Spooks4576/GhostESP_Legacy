@@ -9,7 +9,7 @@
 
 WiFiManager wifiManager;
 
-// Fix For Stupid Iphone Line Break Bug
+// Fix For Stupid IOS Line Break Bug
 const char* removeLineBreaks(const char* input) {
     char* buffer = new char[strlen(input) + 1];
     char* p = buffer;
@@ -80,15 +80,13 @@ public:
           strncpy(ssid, flipperMessage.c_str(), flipperMessage.length());
           has_ap = true;
           Serial.println("ap set");
-          digitalWrite(B_PIN, LOW);
-          digitalWrite(R_PIN, LOW);
+          digitalWrite(G_PIN, LOW);
           Serial.println("all set");
           ShouldMultithread = true;
           begin();
         }
       } else if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
         Serial.println("reset Tag Found Rebooting");
-        delay(1000);
         esp_restart();
       } else {
         Serial.println("Regular Command Called");
