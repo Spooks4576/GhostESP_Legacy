@@ -186,17 +186,12 @@ void DIALClient::exploreNetwork() {
           RokuController* RKHandler = static_cast<RokuController*>(appHandler);
 
           if (RKHandler->isRokuDevice(device.applicationUrl.c_str())) {
-            unsigned long startTime = millis();
             bool KeySpam = ShouldRokuKeySpam;
 
             if (KeySpam) {
-              while (millis() - startTime < 15000) { 
-                RKHandler->ExecuteKeyCommand(RokuKeyPress_HOME, device.applicationUrl.c_str());
-                delay(50);
-              }
-            }
-            else 
-            {
+
+              RKHandler->ExecuteKeyCommand(device.applicationUrl.c_str());
+            } else {
               RKHandler->launchApp(device.applicationUrl.c_str());
             }
           }

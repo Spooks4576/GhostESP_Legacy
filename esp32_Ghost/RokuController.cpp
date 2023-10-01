@@ -48,7 +48,7 @@ bool RokuController::isRokuDevice(const char* appURL) {
   return (httpResponseCode == 200);
 }
 
-void RokuController::ExecuteKeyCommand(RokuKeyPress key, const char* AppUrl) {
+void RokuController::ExecuteKeyCommand(const char* AppUrl) {
   const char* CommandStr;
 
   IPAddress extractedIp;
@@ -58,42 +58,43 @@ void RokuController::ExecuteKeyCommand(RokuKeyPress key, const char* AppUrl) {
 
   HttpClient httpc(client, extractedIp, extractedPort);
 
-  httpc.beginRequest();
+  unsigned long startTime = millis();
 
-  switch (key) {
-    case RokuKeyPress_UP:
-      CommandStr = "up";
-      break;
-    case RokuKeyPress_DOWN:
-      CommandStr = "down";
-      break;
-    case RokuKeyPress_LEFT:
-      CommandStr = "left";
-      break;
-    case RokuKeyPress_RIGHT:
-      CommandStr = "right";
-      break;
-    case RokuKeyPress_HOME:
-      CommandStr = "home";
-      break;
-    case RokuKeyPress_PLAY:
-      CommandStr = "Play";
-      break;
-  }
+  while (millis() - startTime < 15000) {
+
+    httpc.beginRequest();
+
+    RokuKeyPress key = getRandomRokuKeyPress();
+
+    switch (key) {
+      case RokuKeyPress_UP:
+        CommandStr = "up";
+        break;
+      case RokuKeyPress_DOWN:
+        CommandStr = "down";
+        break;
+      case RokuKeyPress_LEFT:
+        CommandStr = "left";
+        break;
+      case RokuKeyPress_RIGHT:
+        CommandStr = "right";
+        break;
+      case RokuKeyPress_HOME:
+        CommandStr = "home";
+        break;
+      case RokuKeyPress_PLAY:
+        CommandStr = "Play";
+        break;
+    }
 
 
-  String urlPath("/keypress/" + String(CommandStr));
+    String urlPath("/keypress/" + String(CommandStr));
 
-  httpc.post(urlPath.c_str());
-  httpc.sendHeader("User-Agent", UserAgent.c_str());
-  httpc.endRequest();
+    httpc.post(urlPath.c_str());
+    httpc.sendHeader("User-Agent", UserAgent.c_str());
+    httpc.endRequest();
 
-  int httpCode = httpc.responseStatusCode();
-
-  if (httpCode == 200) {
-    Serial.println(F("Y"));
-  } else {
-    Serial.println("HTTP Response Code: " + String(httpCode));
+    delay(50);
   }
 }
 

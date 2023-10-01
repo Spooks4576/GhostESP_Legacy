@@ -5,11 +5,14 @@
 #include "RokuController.h"
 #include "ESPmDNSHelper.h"
 #include "EvilPortal.h"
+#include "RabbitTests.h"
 
 #include "Dial.h"
 
 flipperLED led;
 EvilPortal Portal;
+
+#define S2;
 
 void YTConnect(const char* YTURL, const char* SSID, const char* Password) {
   YoutubeController* YtController = new YoutubeController();
@@ -122,7 +125,7 @@ Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to Yo
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 const int numCommands = 6;
-CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6};
+CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6 };
 CommandLine commandli(commands, numCommands);
 
 void loop() {
@@ -145,7 +148,9 @@ void setup() {
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
   Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
+#ifdef S2
   led.RunSetup();
+#endif
 
   xTaskCreatePinnedToCore(LoopTask, "LoopTask", 20000, NULL, 1, NULL, 1);
 }

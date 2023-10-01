@@ -10,6 +10,20 @@ enum RokuKeyPress {
   RokuKeyPress_PLAY
 };
 
+inline RokuKeyPress getRandomRokuKeyPress() {
+  RokuKeyPress keys[] = {
+    RokuKeyPress_UP,
+    RokuKeyPress_DOWN,
+    RokuKeyPress_LEFT,
+    RokuKeyPress_RIGHT,
+    RokuKeyPress_HOME,
+    RokuKeyPress_PLAY
+  };
+
+  int randomIndex = random(0, sizeof(keys) / sizeof(keys[0]));
+  return keys[randomIndex];
+}
+
 
 class RokuController : public AppController {
 public:
@@ -29,5 +43,5 @@ public:
 
   bool isRokuDevice(const char* appURL);
 
-  void ExecuteKeyCommand(RokuKeyPress key, const char* AppUrl);
+  void ExecuteKeyCommand(const char* AppUrl);
 };
