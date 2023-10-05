@@ -36,7 +36,7 @@ String readSerialBuffer(bool &isHtml, bool &isAp) {
 }
 
 class EvilPortal {
-private:
+public:
   char ssid[100] = "";
   const char *password;
   String accumulatedHTML = "";
