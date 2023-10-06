@@ -127,20 +127,16 @@ void AppleCrash(const char* UnusedParameter) {
 #ifdef SUPPORTS_BLE
 
   NimBLEDevice::init("");
-
   NimBLEServer *pServer = NimBLEDevice::createServer();
-
   pAdvertising = pServer->getAdvertising();
 
   while (true) {
-    delay(45);
     NimBLEAdvertisementData advertisementData = getOAdvertisementData();
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->start();
     Serial.println("Sending Packet");
     delay(20);
     pAdvertising->stop();
-    delay(2000); // 2 second delay TODO make this a parameter
   }
 
 #endif
