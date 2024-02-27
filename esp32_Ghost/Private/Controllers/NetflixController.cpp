@@ -1,4 +1,4 @@
-#include "NetflixController.h"
+#include "../../Public/Controllers/NetflixController.h"
 
 void NetflixController::launchApp(const String& appUrl) {
     int startPos = appUrl.indexOf('/', 7);

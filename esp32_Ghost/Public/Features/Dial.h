@@ -1,8 +1,8 @@
 #pragma once
-#include "AppController.h"
-#include "NetflixController.h"
-#include "YoutubeController.h"
-#include "RokuController.h"
+#include "../Controllers/AppController.h"
+#include "../Controllers/NetflixController.h"
+#include "../Controllers/YoutubeController.h"
+#include "../Controllers/RokuController.h"
 #include <ArduinoHttpClient.h>
 #include <set>
 #include <vector>

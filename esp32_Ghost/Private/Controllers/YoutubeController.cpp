@@ -1,4 +1,4 @@
-#include "YoutubeController.h"
+#include "../../Public/Controllers/YoutubeController.h"
 
 
 void YoutubeController::launchApp(const String& appUrl) {

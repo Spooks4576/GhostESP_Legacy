@@ -1,4 +1,4 @@
-#include "Dial.h"
+#include "../../Public/Features/Dial.h"
 
 const int MAX_RETRIES = 50;
 const int RETRY_DELAY = 500;

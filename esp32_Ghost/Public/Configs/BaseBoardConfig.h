@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include "../../Public/Controllers/YoutubeController.h"
+#include "../../Public/Features/Dial.h"
 
 struct BaseBoardConfig {
     int ledPin_B = -1;
@@ -11,13 +13,23 @@ struct BaseBoardConfig {
     int bluetoothTxPin = -1;
     int bluetoothRxPin = -1;
     int neopixelPin = -1;
+    int pixel_count = -1;
     int sdpin = -1;
     bool SupportsBluetooth = false;
     bool SupportsNeoPixel = false;
+    Adafruit_NeoPixel strip;
 
-    BaseBoardConfig() {}
+    BaseBoardConfig() {
+
+        if (SupportsNeoPixel && neopixelPin != -1 && pixel_count != -1)
+        {
+            Adafruit_NeoPixel instrip(pixel_count, neopixelPin, NEO_GRB + NEO_KHZ800);
+            strip = instrip;
+        }
+    }
 
     virtual void init() {
+
         if (ledPin_B != -1 && ledPin_G != -1 && ledPin_R != -1) {
             pinMode(ledPin_B, OUTPUT);
             pinMode(ledPin_G, OUTPUT);
@@ -30,13 +42,10 @@ struct BaseBoardConfig {
         }
 
         if (SupportsBluetooth && bluetoothTxPin != -1 && bluetoothRxPin != -1) {
+            // TODO Add Bluetooth Initilization
         }
 
-        if (SupportsNeoPixel && neopixelPin != -1) {
-        }
-    }
-
-    virtual void loop() {
+        
         Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
         Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
     }
@@ -44,20 +53,20 @@ struct BaseBoardConfig {
     virtual void blinkLed() {
         if (!SupportsNeoPixel && ledPin_B != -1 && ledPin_G != -1 && ledPin_R != -1) {
             digitalWrite(ledPin_B, HIGH);
-            digitalWrite(ledPin_G, LOW);
+            digitalWrite(ledPin_G, HIGH);
             digitalWrite(ledPin_R, LOW);
             delay(700);
-            digitalWrite(ledPin_B, LOW);
+            digitalWrite(ledPin_B, HIGH);
             digitalWrite(ledPin_G, LOW);
             digitalWrite(ledPin_R, HIGH);
             delay(700);
             digitalWrite(ledPin_B, HIGH);
-            digitalWrite(ledPin_G, LOW);
+            digitalWrite(ledPin_G, HIGH);
             digitalWrite(ledPin_R, LOW);
             delay(700);
-            digitalWrite(ledPin_B, LOW);
-            digitalWrite(ledPin_G, LOW);
-            digitalWrite(ledPin_R, LOW);
+            digitalWrite(ledPin_B, HIGH);
+            digitalWrite(ledPin_G, HIGH);
+            digitalWrite(ledPin_R, HIGH);
         }
         else 
         {
@@ -81,9 +90,9 @@ struct BaseBoardConfig {
     virtual void TurnoffLed()
     {
         if (!SupportsNeoPixel && ledPin_B != -1 && ledPin_G != -1 && ledPin_R != -1) {
-            digitalWrite(ledPin_B, LOW);
-            digitalWrite(ledPin_G, LOW);
-            digitalWrite(ledPin_R, LOW);
+            digitalWrite(ledPin_B, HIGH);
+            digitalWrite(ledPin_G, HIGH);
+            digitalWrite(ledPin_R, HIGH);
         }
         else 
         {
@@ -133,8 +142,24 @@ struct BaseBoardConfig {
                 Serial.println("reset Tag Found Rebooting");
                 esp_restart();
             }
-            else {
-                Serial.println("Regular Command Called");
+            else if (flipperMessage.startsWith("YTDialConnect")) {
+                flipperMessage.remove(0, 13); // Remove "YTDialConnect" from the message
+                int firstSpace = flipperMessage.indexOf(' ');
+                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+                
+                String YTURL = flipperMessage.substring(0, firstSpace);
+                String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
+                String Password = flipperMessage.substring(secondSpace + 1);
+
+                YoutubeController* YtController = new YoutubeController();
+
+                DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), YtController);
+
+                setLedColor(0, 1, 1);
+
+                dial->Execute();
+
+                TurnoffLed();
             }
         }
     }
