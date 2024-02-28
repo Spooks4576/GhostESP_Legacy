@@ -60,9 +60,3 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"Compilation failed: {e}")
     exit(1)
-
-# Construct and execute the upload command if compilation is successful
-upload_command = f'arduino-cli upload -p {port} --fqbn "{fqbn}" "{project_dir}"'
-print("Upload command:", upload_command)
-subprocess.run(upload_command, check=True, shell=True, text=True)
-print("Upload successful")
