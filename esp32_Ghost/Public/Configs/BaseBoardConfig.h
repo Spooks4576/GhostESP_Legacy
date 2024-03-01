@@ -129,6 +129,8 @@ struct BaseBoardConfig {
         return buffer;
     }
 
+
+
     virtual void Loop()
     {
         if (Serial.available() > 0) {
@@ -137,29 +139,49 @@ struct BaseBoardConfig {
             bool StartsWithAP;
             flipperMessage = readSerialBuffer(StartsWithHTML, StartsWithAP);
 
-            if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop"))
-            {
-                Serial.println("reset Tag Found Rebooting");
-                esp_restart();
-            }
-            else if (flipperMessage.startsWith("YTDialConnect")) {
-                flipperMessage.remove(0, 13); // Remove "YTDialConnect" from the message
+
+            if (flipperMessage.startsWith("YTDialConnect")) {
+                flipperMessage.remove(0, 14); // Remove "YTDialConnect" from the message
+    
+                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
+
                 int firstSpace = flipperMessage.indexOf(' ');
                 int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
-                
-                String YTURL = flipperMessage.substring(0, firstSpace);
-                String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
-                String Password = flipperMessage.substring(secondSpace + 1);
 
-                YoutubeController* YtController = new YoutubeController();
+                // Debugging lines to check the positions of spaces
+                Serial.println("First space at: " + String(firstSpace));
+                Serial.println("Second space at: " + String(secondSpace));
 
-                DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), YtController);
+                if (firstSpace != -1 && secondSpace != -1) {
+                    String YTURL = flipperMessage.substring(0, firstSpace);
+                    String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
+                    String Password = flipperMessage.substring(secondSpace + 1);
 
-                setLedColor(0, 1, 1);
+                    // Debugging lines to check the parsed parts
+                    Serial.println("YTURL: " + YTURL);
+                    Serial.println("SSID: " + SSID);
+                    Serial.println("Password: " + Password);
 
-                dial->Execute();
+                    YTURL.trim();
+                    SSID.trim();
+                    Password.trim();
 
-                TurnoffLed();
+
+                    YoutubeController* YtController = new YoutubeController();
+                    DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), YtController);
+
+                    setLedColor(0, 1, 1);
+
+
+                    dial->Execute();
+                    delete dial; // Clean up after execution
+                    vTaskDelete(NULL); // Delete the task when done
+
+                    TurnoffLed();
+                } else {
+                    // Handle error: message format incorrect
+                    Serial.println("Error: Incorrect message format for YT Dial connection.");
+                }
             }
         }
     }

@@ -13,10 +13,29 @@
 
 S2Config boardConfig; // Change this Based on board your compiling for
 
+void SerialCheckTask(void *pvParameters) {
+    while (1) {
+        if (Serial.available() > 0) {
+            String flipperMessage;
+            flipperMessage = Serial.readString(); 
+
+            Serial.println(flipperMessage);
+
+            if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
+                Serial.println("Reset tag found. Rebooting...");
+                esp_restart(); // Restart the ESP32
+            }
+        }
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
+}
+
 void setup() {
     boardConfig.init();
     boardConfig.blinkLed();
     boardConfig.TurnoffLed();
+
+    xTaskCreate(SerialCheckTask, "SerialCheckTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
