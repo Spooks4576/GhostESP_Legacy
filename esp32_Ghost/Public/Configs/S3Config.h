@@ -1,5 +1,6 @@
 #ifndef S3_CONFIG_H
 #define S3_CONFIG_H
+#define USE_BLUETOOTH
 
 #include "BaseBoardConfig.h"
 
@@ -14,6 +15,7 @@ struct S3Config : public BaseBoardConfig {
         sdpin = 4;
         SupportsBluetooth = true; 
         SupportsNeoPixel = true; 
+        UpdateURL = "http://cdn.spookytools.com/assets/ghostesps3.bin";
     }
 
     void init() override {

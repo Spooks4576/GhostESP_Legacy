@@ -3,8 +3,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include "Public/Configs/S2Config.h"
-#include "Public/Configs/S3Config.h"
-#include "Public/Configs/WroomConfig.h"
+// #include "Public/Configs/S3Config.h"
+// #include "Public/Configs/WroomConfig.h" // DO NOT Include multiple configs only include one at a time
 #include "Private/Features/Dial.cpp"
 
 // Have to Include .cpp Files due to Arduino Not Liking Organization
@@ -39,7 +39,7 @@ void setup() {
 
     xTaskCreate(SerialCheckTask, "SerialCheckTask", 2048, NULL, 1, NULL);
 
-    Serial.println("STATION OF THE GAS THIS IS UPDATE 90000000000000000 YAYAYA");
+    Serial.println("Ghost ESP 2.2");
 }
 
 void loop() {
