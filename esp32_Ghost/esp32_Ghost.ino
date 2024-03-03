@@ -1,3 +1,5 @@
+#define DEBUG_ESP_HTTP_UPDATE
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include "Public/Configs/S2Config.h"
@@ -36,6 +38,8 @@ void setup() {
     boardConfig.TurnoffLed();
 
     xTaskCreate(SerialCheckTask, "SerialCheckTask", 2048, NULL, 1, NULL);
+
+    Serial.println("STATION OF THE GAS THIS IS UPDATE 90000000000000000 YAYAYA");
 }
 
 void loop() {

@@ -2,9 +2,45 @@
 #define BASE_BOARD_CONFIG_H
 
 #include <Arduino.h>
+#include <HTTPUpdate.h>
 #include <Adafruit_NeoPixel.h>
+#include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Features/Dial.h"
+
+void retainLineExcludingKeywords(String &content, const String &keyword1, const String &keyword2) {
+    int index1 = content.indexOf(keyword1);
+    int index2 = content.indexOf(keyword2);
+    
+    // If neither keyword is found, return the content as-is
+    if (index1 == -1 && index2 == -1) {
+        return;
+    }
+
+    // Split the content into lines
+    int startPos = 0;
+    int endPos = content.indexOf('\n');
+    while (endPos != -1) {
+        String line = content.substring(startPos, endPos);
+        if (line.indexOf(keyword1) == -1 && line.indexOf(keyword2) == -1 && line.length() > 0) { // Check for non-empty line
+            content = line;
+            return;
+        }
+        startPos = endPos + 1;
+        endPos = content.indexOf('\n', startPos);
+    }
+
+    // Check the last line (if there's no newline at the end)
+    if (startPos < content.length()) {
+        String line = content.substring(startPos);
+        if (line.indexOf(keyword1) == -1 && line.indexOf(keyword2) == -1 && line.length() > 0) { // Check for non-empty line
+            content = line;
+            return;
+        }
+    }
+
+    content = "";  // If no suitable line is found, clear the content
+}
 
 struct BaseBoardConfig {
     int ledPin_B = -1;
@@ -121,15 +157,13 @@ struct BaseBoardConfig {
 
     String readSerialBuffer(bool &isHtml, bool &isAp) {
         String buffer = "";
-        buffer = Serial.readString();
+        buffer = Serial.readStringUntil('\r\n');
 
         isHtml = buffer.startsWith("sethtml=");
         isAp = buffer.startsWith("setap=");
 
         return buffer;
     }
-
-
 
     virtual void Loop()
     {
@@ -139,6 +173,14 @@ struct BaseBoardConfig {
             bool StartsWithAP;
             flipperMessage = readSerialBuffer(StartsWithHTML, StartsWithAP);
 
+            Serial.println(flipperMessage.c_str());
+
+            if (flipperMessage.startsWith("settings"))
+            {
+                retainLineExcludingKeywords(flipperMessage, "settings -s EnableLED enable", "settings -s SavePCAP enable");
+            } // Hack for Marauder app. until i can produce my own flipper app
+
+            Serial.println(flipperMessage.c_str());
 
             if (flipperMessage.startsWith("YTDialConnect")) {
                 flipperMessage.remove(0, 14); // Remove "YTDialConnect" from the message
@@ -169,18 +211,97 @@ struct BaseBoardConfig {
 
                     YoutubeController* YtController = new YoutubeController();
                     DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), YtController);
-
-                    setLedColor(0, 1, 1);
+                    setLedColor(0, 1, 0);
 
 
                     dial->Execute();
                     delete dial; // Clean up after execution
-                    vTaskDelete(NULL); // Delete the task when done
+                    delete YtController;
 
                     TurnoffLed();
                 } else {
                     // Handle error: message format incorrect
                     Serial.println("Error: Incorrect message format for YT Dial connection.");
+                }
+            }
+            
+            if (flipperMessage.startsWith("YTChromeConnect"))
+            {
+                flipperMessage.remove(0, 16); // Remove "YTChromeConnect" from the message + Space
+    
+                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
+
+                int firstSpace = flipperMessage.indexOf(' ');
+                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+
+                // Debugging lines to check the positions of spaces
+                Serial.println("First space at: " + String(firstSpace));
+                Serial.println("Second space at: " + String(secondSpace));
+
+                if (firstSpace != -1 && secondSpace != -1) {
+                    String YTURL = flipperMessage.substring(0, firstSpace);
+                    String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
+                    String Password = flipperMessage.substring(secondSpace + 1);
+
+                    // Debugging lines to check the parsed parts
+                    Serial.println("YTURL: " + YTURL);
+                    Serial.println("SSID: " + SSID);
+                    Serial.println("Password: " + Password);
+
+                    YTURL.trim();
+                    SSID.trim();
+                    Password.trim();
+                }
+            }
+
+            if (flipperMessage.startsWith("Update"))
+            {
+                flipperMessage.remove(0, 7);
+    
+                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
+
+                int firstSpace = flipperMessage.indexOf(' ');
+                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+
+                // Debugging lines to check the positions of spaces
+                Serial.println("First space at: " + String(firstSpace));
+                Serial.println("Second space at: " + String(secondSpace));
+
+                if (firstSpace != -1 && secondSpace != -1) {
+                    String SSID = flipperMessage.substring(0, firstSpace);
+                    String Password = flipperMessage.substring(firstSpace + 1, secondSpace);
+
+                    Serial.println("SSID: " + SSID);
+                    Serial.println("Password: " + Password);
+
+                    SSID.trim();
+                    Password.trim();
+
+                    WiFi.begin(SSID, Password);
+                    while (WiFi.status() != WL_CONNECTED) {
+                        delay(100);
+                        Serial.print(".");
+                    }
+                    Serial.println("\nConnected to Wi-Fi");
+                    Serial.println("\nSet Callback");
+
+                    WiFiClient client;
+
+                    t_httpUpdate_return ret = httpUpdate.update(client, "http://cdn.spookytools.com/assets/ghostesp.bin", "1.0.0", 0);
+
+                    switch(ret) {
+                        case HTTP_UPDATE_FAILED:
+                            Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+                            break;
+
+                        case HTTP_UPDATE_NO_UPDATES:
+                            Serial.println("HTTP_UPDATE_NO_UPDATES");
+                            break;
+
+                        case HTTP_UPDATE_OK:
+                            Serial.println("HTTP_UPDATE_OK");
+                            break;
+                    }
                 }
             }
         }
