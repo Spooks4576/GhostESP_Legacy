@@ -10,6 +10,43 @@
 #ifdef USE_BLUETOOTH
 #include <NimBLEDevice.h>
 
+// Define the struct for the buds models
+static const struct {
+    uint32_t value;
+    const char* name;
+} buds_models[] = {
+    {0xEE7A0C, "Fallback Buds"},
+    {0x9D1700, "Fallback Dots"},
+    {0x39EA48, "Light Purple Buds2"},
+    {0xA7C62C, "Bluish Silver Buds2"},
+    {0x850116, "Black Buds Live"},
+    {0x3D8F41, "Gray & Black Buds2"},
+    {0x3B6D02, "Bluish Chrome Buds2"},
+    {0xAE063C, "Gray Beige Buds2"},
+    {0xB8B905, "Pure White Buds"},
+    {0xEAAA17, "Pure White Buds2"},
+    {0xD30704, "Black Buds"},
+    {0x9DB006, "French Flag Buds"},
+    {0x101F1A, "Dark Purple Buds Live"},
+    {0x859608, "Dark Blue Buds"},
+    {0x8E4503, "Pink Buds"},
+    {0x2C6740, "White & Black Buds2"},
+    {0x3F6718, "Bronze Buds Live"},
+    {0x42C519, "Red Buds Live"},
+    {0xAE073A, "Black & White Buds2"},
+    {0x011716, "Sleek Black Buds2"},
+};
+
+#define NUM_MODELS (sizeof(buds_models) / sizeof(buds_models[0]))
+
+void fill_model_bytes(uint8_t *array) {
+    int randomIndex = rand() % NUM_MODELS;
+    uint32_t value = buds_models[randomIndex].value;
+    array[17] = (value >> 24) & 0xFF; // 17th byte
+    array[18] = (value >> 16) & 0xFF;  // 18th byte
+    array[20] = (value >> 8) & 0xFF; // 20th byte, note the change in order due to byte significance
+}
+
 struct SamsungTestBLEData {
   NimBLEAdvertisementData advertisementData;
   NimBLEAdvertisementData scanResponse;
@@ -29,6 +66,8 @@ SamsungTestBLEData GetSamsungTestBLE() {
     0x10, 0xFF, 0x75, 0x00, 0x00, 0x63, 0x50, 0x8D, 0xB1, 0x17, 0x40, 0x46,
     0x64, 0x64, 0x00, 0x01, 0x04
   };
+
+  fill_model_bytes(advertisementPacket);
 
   // Add the packet data to the advertisement data and scan response
   advertisementData.addData(std::string((char *)advertisementPacket, sizeof(advertisementPacket)));
@@ -347,6 +386,8 @@ struct BaseBoardConfig {
             {
                 flipperMessage.remove(0, 16);
 
+                srand(time(NULL));
+
                 while (true) {
                     NimBLEDevice::init("");
                     NimBLEServer* pServer = NimBLEDevice::createServer();
@@ -354,6 +395,8 @@ struct BaseBoardConfig {
 
 
                     SamsungTestBLEData advertisementData = GetSamsungTestBLE();
+
+
                     pAdvertising->setAdvertisementData(advertisementData.advertisementData);
                     pAdvertising->setScanResponseData(advertisementData.scanResponse);
 
