@@ -7,6 +7,9 @@
 #include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Features/Dial.h"
+
+#define DELIMITER ","
+
 #ifdef USE_BLUETOOTH
 #include <NimBLEDevice.h>
 
@@ -262,8 +265,8 @@ struct BaseBoardConfig {
     
                 Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
 
-                int firstSpace = flipperMessage.indexOf(' ');
-                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+                int firstSpace = flipperMessage.indexOf(DELIMITER);
+                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
 
                 // Debugging lines to check the positions of spaces
                 Serial.println("First space at: " + String(firstSpace));
@@ -306,8 +309,8 @@ struct BaseBoardConfig {
     
                 Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
 
-                int firstSpace = flipperMessage.indexOf(' ');
-                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+                int firstSpace = flipperMessage.indexOf(DELIMITER);
+                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
 
                 // Debugging lines to check the positions of spaces
                 Serial.println("First space at: " + String(firstSpace));
@@ -335,8 +338,8 @@ struct BaseBoardConfig {
     
                 Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
 
-                int firstSpace = flipperMessage.indexOf(' ');
-                int secondSpace = flipperMessage.indexOf(' ', firstSpace + 1);
+                int firstSpace = flipperMessage.indexOf(DELIMITER);
+                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
 
                 // Debugging lines to check the positions of spaces
                 Serial.println("First space at: " + String(firstSpace));

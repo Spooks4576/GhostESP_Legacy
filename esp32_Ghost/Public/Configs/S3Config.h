@@ -6,13 +6,13 @@
 
 struct S3Config : public BaseBoardConfig {
     S3Config() {
-        ledPin_B = 32; 
-        ledPin_G = 33;
-        ledPin_R = 25; 
+        ledPin_B = -1; 
+        ledPin_G = -1;
+        ledPin_R = -1; 
         bluetoothTxPin = 26; 
         bluetoothRxPin = 27; 
-        neopixelPin = 14;
-        sdpin = 4;
+        neopixelPin = 38;
+        sdpin = -1;
         SupportsBluetooth = true; 
         SupportsNeoPixel = true; 
         UpdateURL = "http://cdn.spookytools.com/assets/ghostesps3.bin";
