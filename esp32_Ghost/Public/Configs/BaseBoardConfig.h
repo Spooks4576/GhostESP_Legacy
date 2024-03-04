@@ -6,6 +6,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
+#include "../../Public/Controllers/NetflixController.h"
+#include "../../Public/Controllers/RokuController.h"
 #include "../../Public/Features/Dial.h"
 
 #define DELIMITER ","
@@ -116,6 +118,56 @@ void retainLineExcludingKeywords(String &content, const String &keyword1, const 
     content = "";  // If no suitable line is found, clear the content
 }
 
+// Forward Declarations
+
+struct BaseBoardConfig;
+
+namespace Functions
+{
+    void InitDialConnect(BaseBoardConfig* Config, String flipperMessage, HandlerType Type);
+
+#ifdef USE_BLUETOOTH
+    void InitBLEBuds(BaseBoardConfig* Config, String flipperMessage);
+#endif
+
+    void InitUpdate(BaseBoardConfig* Config, String flipperMessage);
+
+    void executeCommand(BaseBoardConfig* Config, const String &commandLine);
+
+}
+
+typedef void (*CommandHandler)(BaseBoardConfig* Config, std::vector<String> params);
+
+struct Command {
+    String name;
+    CommandHandler handler;
+};
+
+namespace Scripting
+{
+    void handleLedOn(BaseBoardConfig* Config, std::vector<String> params);
+    void handleLedOff(BaseBoardConfig* Config, std::vector<String> params);
+    void handleSetColor(BaseBoardConfig* Config, std::vector<String> params);
+    void handlePrint(BaseBoardConfig* Config, std::vector<String> params);
+    void handleSleep(BaseBoardConfig* Config, std::vector<String> params);
+    void handleUpdate(BaseBoardConfig* Config, std::vector<String> params);
+    void handleGalaxyBudSpam(BaseBoardConfig* Config, std::vector<String> params);
+    void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params);
+
+    Command commands[] = {
+    {"LED_ON", handleLedOn},
+    {"PRINT", handlePrint},
+    {"SLEEP", handleSleep},
+    {"LED_OFF", handleLedOff},
+    {"SET_LED_COLOR", handleSetColor},
+    {"UPDATE", handleUpdate},
+    {"GALAXY_BUD_SPAM", handleGalaxyBudSpam},
+    {"DIAL_CONNECT", handleDialConnect}
+    };
+}
+
+
+
 struct BaseBoardConfig {
     int ledPin_B = -1;
     int ledPin_G = -1;
@@ -127,6 +179,8 @@ struct BaseBoardConfig {
     int sdpin = -1;
     bool SupportsBluetooth = false;
     bool SupportsNeoPixel = false;
+    std::vector<String> commandBuffer;
+    bool isScriptMode = false;
 #ifdef USE_BLUETOOTH
     NimBLEAdvertising* pAdvertising;
 #endif
@@ -154,14 +208,6 @@ struct BaseBoardConfig {
         {
             pinMode(sdpin, OUTPUT);
         }
-
-        if (SupportsBluetooth && bluetoothTxPin != -1 && bluetoothRxPin != -1) {
-            // TODO Add Bluetooth Initilization
-        }
-
-        
-        Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
-        Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
     }
 
     virtual void blinkLed() {
@@ -220,9 +266,9 @@ struct BaseBoardConfig {
 
     virtual void setLedColor(int r, int g, int b) {
         if (!SupportsNeoPixel && ledPin_B != -1 && ledPin_G != -1 && ledPin_R != -1) {
-            analogWrite(ledPin_B, r);
-            analogWrite(ledPin_G, g);
-            analogWrite(ledPin_R, b);
+            digitalWrite(ledPin_R, r != 0 ? LOW : HIGH);
+            digitalWrite(ledPin_G, g != 0 ? LOW : HIGH);
+            digitalWrite(ledPin_B, b != 0 ? LOW : HIGH);
         }
         else 
         {
@@ -251,176 +297,322 @@ struct BaseBoardConfig {
             bool StartsWithAP;
             flipperMessage = readSerialBuffer(StartsWithHTML, StartsWithAP);
 
-            Serial.println(flipperMessage.c_str());
-
             if (flipperMessage.startsWith("settings"))
             {
                 retainLineExcludingKeywords(flipperMessage, "settings -s EnableLED enable", "settings -s SavePCAP enable");
             } // Hack for Marauder app. until i can produce my own flipper app
 
-            Serial.println(flipperMessage.c_str());
+            // Dial Commands
 
             if (flipperMessage.startsWith("YTDialConnect")) {
-                flipperMessage.remove(0, 14); // Remove "YTDialConnect" from the message
-    
-                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
+                Functions::InitDialConnect(this, flipperMessage, HandlerType::YoutubeController);
+            }
 
-                int firstSpace = flipperMessage.indexOf(DELIMITER);
-                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
-
-                // Debugging lines to check the positions of spaces
-                Serial.println("First space at: " + String(firstSpace));
-                Serial.println("Second space at: " + String(secondSpace));
-
-                if (firstSpace != -1 && secondSpace != -1) {
-                    String YTURL = flipperMessage.substring(0, firstSpace);
-                    String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
-                    String Password = flipperMessage.substring(secondSpace + 1);
-
-                    // Debugging lines to check the parsed parts
-                    Serial.println("YTURL: " + YTURL);
-                    Serial.println("SSID: " + SSID);
-                    Serial.println("Password: " + Password);
-
-                    YTURL.trim();
-                    SSID.trim();
-                    Password.trim();
-
-
-                    YoutubeController* YtController = new YoutubeController();
-                    DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), YtController);
-                    setLedColor(0, 1, 0);
-
-
-                    dial->Execute();
-                    delete dial; // Clean up after execution
-                    delete YtController;
-
-                    TurnoffLed();
-                } else {
-                    // Handle error: message format incorrect
-                    Serial.println("Error: Incorrect message format for YT Dial connection.");
-                }
+            if (flipperMessage.startsWith("RokuConnect")) {
+                Functions::InitDialConnect(this, flipperMessage, HandlerType::RokuController);
             }
             
-            if (flipperMessage.startsWith("YTChromeConnect"))
-            {
-                flipperMessage.remove(0, 16); // Remove "YTChromeConnect" from the message + Space
-    
-                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
-
-                int firstSpace = flipperMessage.indexOf(DELIMITER);
-                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
-
-                // Debugging lines to check the positions of spaces
-                Serial.println("First space at: " + String(firstSpace));
-                Serial.println("Second space at: " + String(secondSpace));
-
-                if (firstSpace != -1 && secondSpace != -1) {
-                    String YTURL = flipperMessage.substring(0, firstSpace);
-                    String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
-                    String Password = flipperMessage.substring(secondSpace + 1);
-
-                    // Debugging lines to check the parsed parts
-                    Serial.println("YTURL: " + YTURL);
-                    Serial.println("SSID: " + SSID);
-                    Serial.println("Password: " + Password);
-
-                    YTURL.trim();
-                    SSID.trim();
-                    Password.trim();
-                }
+            if (flipperMessage.startsWith("LaunchNetflix")) {
+                Functions::InitDialConnect(this, flipperMessage, HandlerType::NetflixController);
             }
 
             if (flipperMessage.startsWith("Update"))
-            {
-                flipperMessage.remove(0, 7);
-    
-                Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
-
-                int firstSpace = flipperMessage.indexOf(DELIMITER);
-                int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
-
-                // Debugging lines to check the positions of spaces
-                Serial.println("First space at: " + String(firstSpace));
-                Serial.println("Second space at: " + String(secondSpace));
-
-                if (firstSpace != -1 && secondSpace != -1) {
-                    String SSID = flipperMessage.substring(0, firstSpace);
-                    String Password = flipperMessage.substring(firstSpace + 1, secondSpace);
-
-                    Serial.println("SSID: " + SSID);
-                    Serial.println("Password: " + Password);
-
-                    SSID.trim();
-                    Password.trim();
-
-                    WiFi.begin(SSID, Password);
-                    while (WiFi.status() != WL_CONNECTED) {
-                        delay(100);
-                        Serial.print(".");
-                    }
-                    Serial.println("\nConnected to Wi-Fi");
-                    Serial.println("\nSet Callback");
-
-                    WiFiClient client;
-
-                    t_httpUpdate_return ret = httpUpdate.update(client, UpdateURL, "1.0.0", 0);
-
-                    switch(ret) {
-                        case HTTP_UPDATE_FAILED:
-                            Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-                            break;
-
-                        case HTTP_UPDATE_NO_UPDATES:
-                            Serial.println("HTTP_UPDATE_NO_UPDATES");
-                            break;
-
-                        case HTTP_UPDATE_OK:
-                            Serial.println("HTTP_UPDATE_OK");
-                            break;
-                    }
-                }
+            {   
+                Functions::InitUpdate(this, flipperMessage);
             }
 
-#ifdef USE_BLUETOOTH
 
-            if (flipperMessage.startsWith("BLE_SamsungWatch") && SupportsBluetooth)
+            if (flipperMessage.startsWith("<GHOST_SCRIPT_BEGIN>"))
             {
-                flipperMessage.remove(0, 16);
-
-                srand(time(NULL));
-
-                while (true) {
-                    NimBLEDevice::init("");
-                    NimBLEServer* pServer = NimBLEDevice::createServer();
-                    pAdvertising = pServer->getAdvertising();
-
-
-                    SamsungTestBLEData advertisementData = GetSamsungTestBLE();
-
-
-                    pAdvertising->setAdvertisementData(advertisementData.advertisementData);
-                    pAdvertising->setScanResponseData(advertisementData.scanResponse);
-
-
-                    pAdvertising->start();
-                    Serial.println("Sending Packet");
-                    delay(100);
-                    NimBLEDevice::deinit();
-
-                    uint8_t mac[6];
-                    for (int i = 0; i < 6; i++) {
-                    mac[i] = random(0, 256);
-                    }
-                    mac[0] = (mac[0] & 0xFC) | 0x02;
-
-                    esp_base_mac_addr_set(mac);
+                isScriptMode = true;
+                commandBuffer.clear();
+            }
+            else if (flipperMessage.startsWith("<GHOST_SCRIPT_END>")) {
+                isScriptMode = false;
+                
+                for (String &cmd : commandBuffer) {
+                    Functions::executeCommand(this, cmd);
                 }
+                
+                commandBuffer.clear();
+            } else if (isScriptMode) {
+                commandBuffer.push_back(flipperMessage);
+            }
+
+
+#ifdef USE_BLUETOOTH
+            if (flipperMessage.startsWith("BLE_SamsungBuds") && SupportsBluetooth)
+            {
+                InitBLEBuds(this, flipperMessage);
             }
 #endif
         }
     }
 };
+
+namespace Functions
+{
+    void InitDialConnect(BaseBoardConfig* Config, String flipperMessage, HandlerType Type)
+    {
+        flipperMessage.remove(0, 14); // Remove "YTDialConnect" from the message
+
+        Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
+
+        int firstSpace = flipperMessage.indexOf(DELIMITER);
+        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
+
+        // Debugging lines to check the positions of spaces
+        Serial.println("First space at: " + String(firstSpace));
+        Serial.println("Second space at: " + String(secondSpace));
+
+        if (firstSpace != -1 && secondSpace != -1) {
+            String YTURL = flipperMessage.substring(0, firstSpace);
+            String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
+            String Password = flipperMessage.substring(secondSpace + 1);
+
+
+            Serial.println("YTURL: " + YTURL);
+            Serial.println("SSID: " + SSID);
+            Serial.println("Password: " + Password);
+
+            YTURL.trim();
+            SSID.trim();
+            Password.trim();
+
+            AppController* handler = nullptr;
+
+            switch (Type)
+            {
+                case HandlerType::YoutubeController:
+                {
+                    YoutubeController* YtController = new YoutubeController();
+                    handler = YtController;
+                }
+                case HandlerType::NetflixController:
+                {
+                    NetflixController* NfController = new NetflixController();
+                    handler = NfController;
+                }
+                case HandlerType::RokuController:
+                {
+                    RokuController* RKController = new RokuController();
+                    handler = RKController;
+                }
+            }
+
+            
+            DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), handler);
+            Config->setLedColor(0, 1, 0);
+
+
+            dial->Execute();
+            delete dial;
+            delete handler;
+
+            Config->TurnoffLed();
+        } else {
+            Serial.println("Error: Incorrect message format for YT Dial connection.");
+        }
+    }
+
+#ifdef USE_BLUETOOTH
+
+    void InitBLEBuds(BaseBoardConfig* Config, String flipperMessage)
+    {
+        flipperMessage.remove(0, 16);
+
+        srand(time(NULL));
+
+        while (true) {
+            NimBLEDevice::init("");
+            NimBLEServer* pServer = NimBLEDevice::createServer();
+            pAdvertising = pServer->getAdvertising();
+
+
+            SamsungTestBLEData advertisementData = GetSamsungTestBLE();
+
+
+            pAdvertising->setAdvertisementData(advertisementData.advertisementData);
+            pAdvertising->setScanResponseData(advertisementData.scanResponse);
+
+
+            pAdvertising->start();
+            Serial.println("Sending Packet");
+            delay(100);
+            NimBLEDevice::deinit();
+
+            uint8_t mac[6];
+            for (int i = 0; i < 6; i++) {
+            mac[i] = random(0, 256);
+            }
+            mac[0] = (mac[0] & 0xFC) | 0x02;
+
+            esp_base_mac_addr_set(mac);
+        }
+    }
+#endif
+
+    void executeCommand(BaseBoardConfig* Config, const String &commandLine) {
+        int openParenIndex = commandLine.indexOf('(');
+        int closeParenIndex = commandLine.lastIndexOf(')');
+
+        String commandName = commandLine.substring(0, openParenIndex);
+        String paramString = commandLine.substring(openParenIndex + 1, closeParenIndex);
+
+        commandName.trim();
+
+        std::vector<String> params;
+        bool inQuotes = false;
+        String param = "";
+        for (int i = 0; i < paramString.length(); i++) {
+            char c = paramString[i];
+            if (c == '\"') {
+                inQuotes = !inQuotes; // Toggle state
+            } else if (c == ',' && !inQuotes) {
+                params.push_back(param);
+                param = ""; // Reset for the next parameter
+            } else {
+                param += c; // Add character to the current parameter
+            }
+        }
+        if (param.length() > 0) {
+            params.push_back(param); // Add the last parameter
+        }
+
+        for (Command &cmd : Scripting::commands) {
+            if (cmd.name == commandName) {
+                cmd.handler(Config, params);
+                return;
+            }
+        }
+        Serial.println("Unknown command: " + commandName);
+    }
+
+
+    void InitUpdate(BaseBoardConfig* Config, String flipperMessage)
+    {
+        flipperMessage.remove(0, 7);
+    
+        Serial.println("Debug: " + flipperMessage); 
+
+        int firstSpace = flipperMessage.indexOf(DELIMITER);
+        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
+
+       
+        Serial.println("First space at: " + String(firstSpace));
+        Serial.println("Second space at: " + String(secondSpace));
+
+        if (firstSpace != -1 && secondSpace != -1) {
+            Config->setLedColor(0, 1, 0);
+            String SSID = flipperMessage.substring(0, firstSpace);
+            String Password = flipperMessage.substring(firstSpace + 1, secondSpace);
+
+            Serial.println("SSID: " + SSID);
+            Serial.println("Password: " + Password);
+
+            SSID.trim();
+            Password.trim();
+
+            WiFi.begin(SSID, Password);
+            while (WiFi.status() != WL_CONNECTED) {
+                delay(100);
+                Serial.print(".");
+            }
+            Serial.println("\nConnected to Wi-Fi");
+            Serial.println("\nSet Callback");
+
+            WiFiClient client;
+
+            t_httpUpdate_return ret = httpUpdate.update(client, Config->UpdateURL, "1.0.0", 0);
+
+            switch(ret) {
+                case HTTP_UPDATE_FAILED:
+                    Config->setLedColor(0, 1, 1);
+                    Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+                    break;
+
+                case HTTP_UPDATE_NO_UPDATES:
+                    Config->setLedColor(0, 1, 1);
+                    Serial.println("HTTP_UPDATE_NO_UPDATES");
+                    break;
+
+                case HTTP_UPDATE_OK:
+                    Config->setLedColor(1, 0, 1);
+                    Serial.println("HTTP_UPDATE_OK");
+                    break;
+            }
+        }
+    }
+}
+
+namespace Scripting
+{
+    void handleLedOn(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        Config->blinkLed();
+    }
+    void handleLedOff(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        Config->TurnoffLed();
+    }
+    void handleSetColor(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        int red = params[0].toInt();
+        int green = params[0].toInt();
+        int blue = params[0].toInt();
+
+        Config->setLedColor(red, green, blue);
+    }
+    void handlePrint(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        Serial.println(params[0]);
+    }
+    void handleSleep(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        int DelayValue = params[0].toInt() / 1000;
+        
+        sleep(DelayValue);
+    }
+    void handleUpdate(BaseBoardConfig* Config, std::vector<String> params)
+    {
+
+        String SSID = params[0];
+        String Password = params[1];
+
+        Functions::InitUpdate(Config, SSID + "," + Password + ",");
+    }
+    void handleGalaxyBudSpam(BaseBoardConfig* Config, std::vector<String> params)
+    {
+#ifdef USE_BLUETOOTH
+        Functions::InitBLEBuds(Config, "BLE_SamsungBuds");
+#endif
+    }
+    void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        String ControllerType = params[0];
+        String SSID = params[1];
+        String Password = params[2];
+        String YTURL = params[3];
+
+        HandlerType targettype = HandlerType::Base;
+
+        if (ControllerType == "Youtube")
+        {
+            targettype = HandlerType::YoutubeController;
+        }
+
+        if (ControllerType == "Netflix")
+        {
+            targettype = HandlerType::NetflixController;
+        }
+
+        if (ControllerType == "Roku")
+        {
+            targettype = HandlerType::RokuController;
+        }
+
+        Functions::InitDialConnect(Config, YTURL + "," + SSID + "," + Password + ",", targettype);
+    }
+}
 
 #endif
