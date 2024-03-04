@@ -10,7 +10,7 @@
 #include "../../Public/Controllers/RokuController.h"
 #include "../../Public/Features/Dial.h"
 
-#define DELIMITER ","
+#define DELIMITER "-+"
 
 #ifdef USE_BLUETOOTH
 #include <NimBLEDevice.h>
@@ -354,12 +354,10 @@ namespace Functions
 {
     void InitDialConnect(BaseBoardConfig* Config, String flipperMessage, HandlerType Type)
     {
-        flipperMessage.remove(0, 14); // Remove "YTDialConnect" from the message
-
         Serial.println("Debug: " + flipperMessage); // Debugging line to check the message
 
         int firstSpace = flipperMessage.indexOf(DELIMITER);
-        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
+        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 2);
 
         // Debugging lines to check the positions of spaces
         Serial.println("First space at: " + String(firstSpace));
@@ -367,8 +365,8 @@ namespace Functions
 
         if (firstSpace != -1 && secondSpace != -1) {
             String YTURL = flipperMessage.substring(0, firstSpace);
-            String SSID = flipperMessage.substring(firstSpace + 1, secondSpace);
-            String Password = flipperMessage.substring(secondSpace + 1);
+            String SSID = flipperMessage.substring(firstSpace + 2, secondSpace);
+            String Password = flipperMessage.substring(secondSpace + 2);
 
 
             Serial.println("YTURL: " + YTURL);
@@ -419,8 +417,6 @@ namespace Functions
 
     void InitBLEBuds(BaseBoardConfig* Config, String flipperMessage)
     {
-        flipperMessage.remove(0, 16);
-
         srand(time(NULL));
 
         while (true) {
@@ -491,12 +487,10 @@ namespace Functions
 
     void InitUpdate(BaseBoardConfig* Config, String flipperMessage)
     {
-        flipperMessage.remove(0, 7);
-    
         Serial.println("Debug: " + flipperMessage); 
 
         int firstSpace = flipperMessage.indexOf(DELIMITER);
-        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 1);
+        int secondSpace = flipperMessage.indexOf(DELIMITER, firstSpace + 2);
 
        
         Serial.println("First space at: " + String(firstSpace));
@@ -505,7 +499,7 @@ namespace Functions
         if (firstSpace != -1 && secondSpace != -1) {
             Config->setLedColor(0, 1, 0);
             String SSID = flipperMessage.substring(0, firstSpace);
-            String Password = flipperMessage.substring(firstSpace + 1, secondSpace);
+            String Password = flipperMessage.substring(firstSpace + 2, secondSpace);
 
             Serial.println("SSID: " + SSID);
             Serial.println("Password: " + Password);
@@ -558,8 +552,8 @@ namespace Scripting
     void handleSetColor(BaseBoardConfig* Config, std::vector<String> params)
     {
         int red = params[0].toInt();
-        int green = params[0].toInt();
-        int blue = params[0].toInt();
+        int green = params[1].toInt();
+        int blue = params[2].toInt();
 
         Config->setLedColor(red, green, blue);
     }
@@ -579,7 +573,7 @@ namespace Scripting
         String SSID = params[0];
         String Password = params[1];
 
-        Functions::InitUpdate(Config, SSID + "," + Password + ",");
+        Functions::InitUpdate(Config, SSID + "-+" + Password + "-+");
     }
     void handleGalaxyBudSpam(BaseBoardConfig* Config, std::vector<String> params)
     {
@@ -611,7 +605,7 @@ namespace Scripting
             targettype = HandlerType::RokuController;
         }
 
-        Functions::InitDialConnect(Config, YTURL + "," + SSID + "," + Password + ",", targettype);
+        Functions::InitDialConnect(Config, YTURL + ",," + SSID + ",," + Password + ",,", targettype);
     }
 }
 
