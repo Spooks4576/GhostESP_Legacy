@@ -333,7 +333,6 @@ struct BaseBoardConfig {
                 for (String &cmd : commandBuffer) {
                     Functions::executeCommand(this, cmd);
                 }
-                
                 commandBuffer.clear();
             } else if (isScriptMode) {
                 commandBuffer.push_back(flipperMessage);
@@ -343,7 +342,7 @@ struct BaseBoardConfig {
 #ifdef USE_BLUETOOTH
             if (flipperMessage.startsWith("BLE_SamsungBuds") && SupportsBluetooth)
             {
-                InitBLEBuds(this, flipperMessage);
+                Functions::InitBLEBuds(this, flipperMessage);
             }
 #endif
         }
@@ -400,8 +399,7 @@ namespace Functions
 
             
             DIALClient* dial = new DIALClient(YTURL.c_str(), SSID.c_str(), Password.c_str(), handler);
-            Config->setLedColor(0, 1, 0);
-
+            Config->setLedColor(0, 1, 0);  
 
             dial->Execute();
             delete dial;
@@ -422,17 +420,17 @@ namespace Functions
         while (true) {
             NimBLEDevice::init("");
             NimBLEServer* pServer = NimBLEDevice::createServer();
-            pAdvertising = pServer->getAdvertising();
+            Config->pAdvertising = pServer->getAdvertising();
 
 
             SamsungTestBLEData advertisementData = GetSamsungTestBLE();
 
 
-            pAdvertising->setAdvertisementData(advertisementData.advertisementData);
-            pAdvertising->setScanResponseData(advertisementData.scanResponse);
+            Config->pAdvertising->setAdvertisementData(advertisementData.advertisementData);
+            Config->pAdvertising->setScanResponseData(advertisementData.scanResponse);
 
 
-            pAdvertising->start();
+            Config->pAdvertising->start();
             Serial.println("Sending Packet");
             delay(100);
             NimBLEDevice::deinit();
