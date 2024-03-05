@@ -603,7 +603,7 @@ namespace Scripting
             targettype = HandlerType::RokuController;
         }
 
-        Functions::InitDialConnect(Config, YTURL + ",," + SSID + ",," + Password + ",,", targettype);
+        Functions::InitDialConnect(Config, YTURL + "-+" + SSID + "-+" + Password + "-+", targettype);
     }
 }
 
