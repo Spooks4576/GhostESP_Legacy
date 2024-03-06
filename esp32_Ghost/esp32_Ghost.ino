@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-//#include "Public/Configs/S2Config.h"
+#include "Public/Configs/S2Config.h"
 //#include "Public/Configs/S3Config.h"
-#include "Public/Configs/S3MiniConfig.h"
+//#include "Public/Configs/S3MiniConfig.h"
 //#include "Public/Configs/WroomConfig.h" // DO NOT Include multiple configs only include one at a time
 #include "Private/Features/Dial.cpp"
 
@@ -15,7 +15,7 @@
 #include "Private/Controllers/RokuController.cpp"
 #include "Private/Controllers/NetflixController.cpp"
 
-S3MiniConfig boardConfig; // Change this Based on board your compiling for
+S2Config boardConfig; // Change this Based on board your compiling for
 
 void SerialCheckTask(void *pvParameters) {
     while (1) {
@@ -25,7 +25,7 @@ void SerialCheckTask(void *pvParameters) {
 
             Serial.println(flipperMessage);
 
-            if (flipperMessage.startsWith("reset") || flipperMessage.startsWith("stop")) {
+            if (flipperMessage.indexOf("reset") != -1 || flipperMessage.indexOf("stop") != -1) {
                 Serial.println("Reset tag found. Rebooting...");
                 esp_restart(); // Restart the ESP32
             }

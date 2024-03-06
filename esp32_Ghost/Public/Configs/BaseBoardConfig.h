@@ -169,9 +169,11 @@ namespace Scripting
 
 
 struct BaseBoardConfig {
+    bool RunningCommand;
     int ledPin_B = -1;
     int ledPin_G = -1;
     int ledPin_R = -1;
+    bool LedOn = false;
     int bluetoothTxPin = -1;
     int bluetoothRxPin = -1;
     int neopixelPin = -1;
@@ -262,6 +264,8 @@ struct BaseBoardConfig {
                 strip.show();
             }
         }
+
+        LedOn = false;
     }
 
     virtual void setLedColor(int r, int g, int b) {
@@ -277,6 +281,8 @@ struct BaseBoardConfig {
                 strip.show();
             }
         }
+
+        LedOn = true;
     }
 
     String readSerialBuffer(bool &isHtml, bool &isAp) {
@@ -289,9 +295,11 @@ struct BaseBoardConfig {
         return buffer;
     }
 
+
+
     virtual void Loop()
     {
-        if (Serial.available() > 0) {
+        if (Serial.available() > 0 && !RunningCommand) {
             String flipperMessage;
             bool StartsWithHTML;
             bool StartsWithAP;
@@ -306,19 +314,27 @@ struct BaseBoardConfig {
 
             if (flipperMessage.startsWith("YTDialConnect")) {
                 Functions::InitDialConnect(this, flipperMessage, HandlerType::YoutubeController);
+                RunningCommand = true;
+                return;
             }
 
             if (flipperMessage.startsWith("RokuConnect")) {
                 Functions::InitDialConnect(this, flipperMessage, HandlerType::RokuController);
+                RunningCommand = true;
+                return;
             }
             
             if (flipperMessage.startsWith("LaunchNetflix")) {
                 Functions::InitDialConnect(this, flipperMessage, HandlerType::NetflixController);
+                RunningCommand = true;
+                return;
             }
 
             if (flipperMessage.startsWith("Update"))
             {   
                 Functions::InitUpdate(this, flipperMessage);
+                RunningCommand = true;
+                return;
             }
 
 
@@ -329,11 +345,13 @@ struct BaseBoardConfig {
             }
             else if (flipperMessage.startsWith("<GHOST_SCRIPT_END>")) {
                 isScriptMode = false;
+                RunningCommand = true;
                 
                 for (String &cmd : commandBuffer) {
                     Functions::executeCommand(this, cmd);
                 }
                 commandBuffer.clear();
+                
             } else if (isScriptMode) {
                 commandBuffer.push_back(flipperMessage);
             }
@@ -345,6 +363,10 @@ struct BaseBoardConfig {
                 Functions::InitBLEBuds(this, flipperMessage);
             }
 #endif
+        }
+        else 
+        {
+
         }
     }
 };
