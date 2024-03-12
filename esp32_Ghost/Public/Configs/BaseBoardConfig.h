@@ -4,7 +4,10 @@
 #include <Arduino.h>
 #include <HTTPUpdate.h>
 #include <Adafruit_NeoPixel.h>
+#include <HTTPClient.h>
 #include "esp_wifi.h"
+#include "esp_wifi_types.h"
+#include "esp_system.h"
 #include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Controllers/NetflixController.h"
@@ -12,6 +15,36 @@
 #include "../../Public/Features/Dial.h"
 
 #define DELIMITER "-+"
+const int MAX_CHANNELS = 12;
+
+const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
+
+typedef struct {
+  unsigned frame_ctrl:16;
+  unsigned duration_id:16;
+  uint8_t addr1[6];
+  uint8_t addr2[6];
+  uint8_t addr3[6];
+  unsigned sequence_ctrl:16;
+  uint8_t addr4[6];
+} wifi_ieee80211_mac_hdr_t;
+
+struct Wifianalyticsdata {
+    unsigned long deauthCount[MAX_CHANNELS];
+    unsigned long authCount[MAX_CHANNELS];
+    unsigned long beaconCount[MAX_CHANNELS];
+    unsigned long probeReqCount[MAX_CHANNELS];
+    unsigned long probeRespCount[MAX_CHANNELS];
+    unsigned long otherPktCount[MAX_CHANNELS];
+    unsigned long startTime[MAX_CHANNELS];
+    unsigned long endTime[MAX_CHANNELS];         
+    String deviceMac;
+};
+
+typedef struct {
+  wifi_ieee80211_mac_hdr_t hdr;
+  uint8_t payload[0];
+} wifi_ieee80211_packet_t;
 
 #ifdef USE_BLUETOOTH
 #include <NimBLEDevice.h>
@@ -135,7 +168,7 @@ namespace Functions
 
     void executeCommand(BaseBoardConfig* Config, const String &commandLine);
 
-    void InitDeauthDetector(BaseBoardConfig* Config, const String &commandLine);
+    void InitDeauthDetector(BaseBoardConfig* Config, String Channel, String SSID, String Password, String WebHookUrl);
 
 }
 
@@ -342,13 +375,6 @@ struct BaseBoardConfig {
                 return;
             }
 
-            if (flipperMessage.startsWith("DetectDeauth"))
-            {   
-                Functions::InitDeauthDetector(this, flipperMessage);
-                RunningCommand = true;
-                return;
-            }
-
 
             if (flipperMessage.startsWith("<GHOST_SCRIPT_BEGIN>"))
             {
@@ -482,59 +508,216 @@ namespace Functions
 
     unsigned long deauthCount = 0;
     unsigned long lastCheckTime = 0;
+    unsigned long lastChannelCheckTime = 0;
+    unsigned long startTime = 0;
     const unsigned long checkInterval = 1000;
+    const unsigned long ChannelHopInterval = 5000;
+    const unsigned long scanDuration = 2 * 60000;
     const unsigned long deauthThreshold = 20;
+    Wifianalyticsdata* analyticsdata;
+    bool ConfigHasChannel = false;
+    int channel = 1;
 
-    void promiscuous_cb(void* buf, wifi_promiscuous_pkt_type_t type)
-    {
+    void promiscuous_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
         if (type != WIFI_PKT_MGMT) return;
-           
+
         const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
         const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
-        const wifi_ieee80211_header_t *hdr = &ipkt->hdr;
+        const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
 
-        
-        if (hdr->frame_ctrl == (WIFI_PKT_MGMT | 0xC0)) {
-            deauthCount++;
+
+        switch(hdr->frame_ctrl & 0xFC) { // Mask to get type and subtype only
+            case 0xB0: // Authentication frame
+                analyticsdata->authCount[channel]++;
+                Serial.println("Got Auth Frame");
+                break;
+            case 0xC0: // Deauthentication frame
+                analyticsdata->deauthCount[channel]++;
+                deauthCount++;
+                Serial.println("Got Deauth Frame");
+                break;
+            case 0x00: // Association request frame
+                analyticsdata->probeReqCount[channel]++;
+                Serial.println("Got Association request Frame");
+                break;
+            case 0x30: // Reassociation response frame
+                analyticsdata->probeRespCount[channel]++;
+                Serial.println("Got Reassociation Response Frame");
+                break;
+            case 0x40: // Probe request frame
+                analyticsdata->probeReqCount[channel]++;
+                Serial.println("Got Probe request frame");
+                break;
+            case 0x50: // Probe response frame
+                analyticsdata->probeRespCount[channel]++;
+                  Serial.println("Got Probe response frame");
+                break;
+            case 0x80: // Beacon frame
+                analyticsdata->beaconCount[channel]++;
+                break;
+            default: 
+                analyticsdata->otherPktCount[channel]++;
+                break;
         }
     }
 
-    void InitDeauthDetector(BaseBoardConfig* Config, const String &commandLine)
+    void sendWifiAnalitics(BaseBoardConfig* Config, String Channel, String SSID, String Password, String WebHookUrl) {
+
+        Config->setLedColor(0x1, 0x0, 0x1);
+
+        if (!WebHookUrl.isEmpty())
+        {
+            WiFi.begin(SSID, Password);
+            while (WiFi.status() != WL_CONNECTED) {
+                delay(1000);
+                Serial.println("Connecting to WiFi...");
+            }
+
+            HTTPClient http;
+            http.addHeader("Content-Type", "application/json");
+            
+            
+            String message;
+            
+            unsigned long duration = analyticsdata->endTime - analyticsdata->startTime; 
+
+            
+            for (int channelIndex = 1; channelIndex < MAX_CHANNELS; channelIndex++) {
+                
+                String message = "{\"content\": \"\", \"embeds\": [{";
+                message += "\"title\": \"WiFi Analytics Summary - Channel " + String(channelIndex) + "\",";
+                message += "\"color\": 3447003,";
+                message += "\"fields\": [";
+                message += "{\"name\":\"Monitored Channel\",\"value\":\"" + String(channelIndex) + "\",\"inline\":true},";
+                message += "{\"name\":\"Monitoring Duration\",\"value\":\"" + String((analyticsdata->endTime[channelIndex] - analyticsdata->startTime[channelIndex]) / 60000) + " minutes (" + String((analyticsdata->endTime[channelIndex] - analyticsdata->startTime[channelIndex]) / 1000) + " seconds)\",\"inline\":true},";
+                message += "{\"name\":\"Deauthentication Packets\",\"value\":\"" + String(analyticsdata->deauthCount[channelIndex]) + "\",\"inline\":false},";
+                message += "{\"name\":\"Authentication Packets\",\"value\":\"" + String(analyticsdata->authCount[channelIndex]) + "\",\"inline\":false},";
+                message += "{\"name\":\"Beacon Packets\",\"value\":\"" + String(analyticsdata->beaconCount[channelIndex]) + "\",\"inline\":false},";
+                message += "{\"name\":\"Probe Request Packets\",\"value\":\"" + String(analyticsdata->probeReqCount[channelIndex]) + "\",\"inline\":false},";
+                message += "{\"name\":\"Probe Response Packets\",\"value\":\"" + String(analyticsdata->probeRespCount[channelIndex]) + "\",\"inline\":false},";
+                message += "{\"name\":\"Other Packet Types\",\"value\":\"" + String(analyticsdata->otherPktCount[channelIndex]) + "\",\"inline\":false}";
+                message += "]}]}";
+
+                
+                http.begin(WebHookUrl);
+                http.addHeader("Content-Type", "application/json");
+                int httpResponseCode = http.POST(message);
+                if (httpResponseCode > 0) {
+                    Serial.print("Data for channel ");
+                    Serial.print(channelIndex);
+                    Serial.println(" sent successfully");
+                } else {
+                    Serial.print("Error sending data for channel ");
+                    Serial.println(channelIndex);
+                }
+                http.end();
+
+                
+                delay(1000);
+            }
+            WiFi.disconnect();
+
+        }
+
+
+        Serial.println("WiFi Analytics Summary:");
+        Serial.println("------------------------------");
+
+        for (int channelIndex = 1; channelIndex < MAX_CHANNELS; channelIndex++) {
+            Serial.print("Monitored Channel: ");
+            Serial.println(channelIndex);
+            Serial.print("Monitoring Duration: ");
+            
+            Serial.print((analyticsdata->endTime[channelIndex] - analyticsdata->startTime[channelIndex]) / 60000);
+            Serial.print(" minutes (");
+            Serial.print((analyticsdata->endTime[channelIndex] - analyticsdata->startTime[channelIndex]) / 1000);
+            Serial.println(" seconds)");
+            Serial.print("Deauthentication Packets: ");
+            Serial.println(analyticsdata->deauthCount[channelIndex]);
+            Serial.print("Authentication Packets: ");
+            Serial.println(analyticsdata->authCount[channelIndex]);
+            Serial.print("Beacon Packets: ");
+            Serial.println(analyticsdata->beaconCount[channelIndex]);
+            Serial.print("Probe Request Packets: ");
+            Serial.println(analyticsdata->probeReqCount[channelIndex]);
+            Serial.print("Probe Response Packets: ");
+            Serial.println(analyticsdata->probeRespCount[channelIndex]);
+            Serial.print("Other Packet Types: ");
+            Serial.println(analyticsdata->otherPktCount[channelIndex]);
+            Serial.println("------------------------------");
+        }
+        
+        Config->setLedColor(0x0, 0x1, 0x0);
+
+        delete analyticsdata;
+
+        Serial.println("Command Finished");
+
+
+        if (!ConfigHasChannel)
+        {
+            InitDeauthDetector(Config, Channel, SSID, Password, WebHookUrl);
+        }
+    }
+
+    void InitDeauthDetector(BaseBoardConfig* Config, String Channel, String SSID, String Password, String WebHookUrl) 
     {
+        startTime = millis();
+
         WiFi.mode(WIFI_STA);
         WiFi.disconnect();
         delay(100);
 
-        commandLine.replace("DetectDeauth", "");
+        Channel.trim();
 
-        commandLine.trim();
+        analyticsdata = new Wifianalyticsdata();
 
-        int channel = std::stoi(commandLine)
+        ConfigHasChannel = !Channel.isEmpty();
+
+        if (ConfigHasChannel)
+        {
+            channel = Channel.toInt();
+        }
+
+        Serial.println("Channel");
+        Serial.println(channel);
 
         esp_wifi_set_promiscuous(true);
-        esp_wifi_set_promiscuous_filter_t filter = {WIFI_PROMIS_FILTER_MASK_ALL};
-        esp_wifi_set_promiscuous_filter(&filter);
+        esp_wifi_set_promiscuous_filter(&filt);
         esp_wifi_set_promiscuous_rx_cb(promiscuous_cb);
         esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
 
-        while (true)
-        {
-            if (millis() - lastCheckTime > checkInterval) 
-            {
-                if (deauthCount > deauthThreshold) 
-                {
+        while (millis() - startTime < scanDuration) {
+            if (millis() - lastCheckTime > checkInterval) {
+                if (deauthCount > deauthThreshold) {
                     Serial.println("Deauth attack detected!");
-                    Config->setLedColor(0x0, 0x1, 0x1);
-                } 
-                else 
-                {
+                    Config->setLedColor(0x1, 0x0, 0x0);
+                } else {
                     Serial.println("Normal network behavior.");
                     Config->setLedColor(0x0, 0x1, 0x0);
                 }
                 deauthCount = 0;
                 lastCheckTime = millis();
             }
+
+            if (millis() - lastChannelCheckTime > ChannelHopInterval && !ConfigHasChannel)
+            {
+                channel = (channel % MAX_CHANNELS) + 1;
+                esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+                lastChannelCheckTime = millis();
+            }
         }
+
+        for (int channelIndex = 1; channelIndex < MAX_CHANNELS; channelIndex++) 
+        {
+            analyticsdata->endTime[channelIndex] = millis();
+            analyticsdata->startTime[channelIndex] = startTime;
+        }
+
+       
+        
+        esp_wifi_set_promiscuous(false);
+        sendWifiAnalitics(Config, Channel, SSID, Password, WebHookUrl);
     }
 
     void executeCommand(BaseBoardConfig* Config, const String &commandLine) {
@@ -674,8 +857,11 @@ namespace Scripting
     void handleDeauthDetector(BaseBoardConfig* Config, std::vector<String> params)
     {
         String channelarg = params[0];
+        String SSIDarg = params[1];
+        String Passwordarg = params[2];
+        String WebHookUrl = params[3];
 
-        Functions::InitDeauthDetector(Config, channelarg);
+        Functions::InitDeauthDetector(Config, channelarg, SSIDarg, Passwordarg, WebHookUrl);
     }
 
 
