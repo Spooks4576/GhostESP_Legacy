@@ -44,6 +44,8 @@ void setup() {
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
   Serial.println(F("Welcome to Ghost ESP Made by Spooky"));
   Serial.println("GHOST GHOST GHOST GHOST GHOST GHOST");
+
+  
 }
 
 void loop() {

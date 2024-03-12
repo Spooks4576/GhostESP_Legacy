@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <HTTPUpdate.h>
 #include <Adafruit_NeoPixel.h>
+#include "esp_wifi.h"
 #include <wifi.h>
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Controllers/NetflixController.h"
@@ -134,6 +135,8 @@ namespace Functions
 
     void executeCommand(BaseBoardConfig* Config, const String &commandLine);
 
+    void InitDeauthDetector(BaseBoardConfig* Config, const String &commandLine);
+
 }
 
 typedef void (*CommandHandler)(BaseBoardConfig* Config, std::vector<String> params);
@@ -153,6 +156,7 @@ namespace Scripting
     void handleUpdate(BaseBoardConfig* Config, std::vector<String> params);
     void handleGalaxyBudSpam(BaseBoardConfig* Config, std::vector<String> params);
     void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params);
+    void handleDeauthDetector(BaseBoardConfig* Config, std::vector<String> params);
 
     Command commands[] = {
     {"LED_ON", handleLedOn},
@@ -162,7 +166,8 @@ namespace Scripting
     {"SET_LED_COLOR", handleSetColor},
     {"UPDATE", handleUpdate},
     {"GALAXY_BUD_SPAM", handleGalaxyBudSpam},
-    {"DIAL_CONNECT", handleDialConnect}
+    {"DIAL_CONNECT", handleDialConnect},
+    {"DETECT_DEAUTH", handleDeauthDetector}
     };
 }
 
@@ -337,6 +342,13 @@ struct BaseBoardConfig {
                 return;
             }
 
+            if (flipperMessage.startsWith("DetectDeauth"))
+            {   
+                Functions::InitDeauthDetector(this, flipperMessage);
+                RunningCommand = true;
+                return;
+            }
+
 
             if (flipperMessage.startsWith("<GHOST_SCRIPT_BEGIN>"))
             {
@@ -467,6 +479,63 @@ namespace Functions
         }
     }
 #endif
+
+    unsigned long deauthCount = 0;
+    unsigned long lastCheckTime = 0;
+    const unsigned long checkInterval = 1000;
+    const unsigned long deauthThreshold = 20;
+
+    void promiscuous_cb(void* buf, wifi_promiscuous_pkt_type_t type)
+    {
+        if (type != WIFI_PKT_MGMT) return;
+           
+        const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
+        const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
+        const wifi_ieee80211_header_t *hdr = &ipkt->hdr;
+
+        
+        if (hdr->frame_ctrl == (WIFI_PKT_MGMT | 0xC0)) {
+            deauthCount++;
+        }
+    }
+
+    void InitDeauthDetector(BaseBoardConfig* Config, const String &commandLine)
+    {
+        WiFi.mode(WIFI_STA);
+        WiFi.disconnect();
+        delay(100);
+
+        commandLine.replace("DetectDeauth", "");
+
+        commandLine.trim();
+
+        int channel = std::stoi(commandLine)
+
+        esp_wifi_set_promiscuous(true);
+        esp_wifi_set_promiscuous_filter_t filter = {WIFI_PROMIS_FILTER_MASK_ALL};
+        esp_wifi_set_promiscuous_filter(&filter);
+        esp_wifi_set_promiscuous_rx_cb(promiscuous_cb);
+        esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+
+        while (true)
+        {
+            if (millis() - lastCheckTime > checkInterval) 
+            {
+                if (deauthCount > deauthThreshold) 
+                {
+                    Serial.println("Deauth attack detected!");
+                    Config->setLedColor(0x0, 0x1, 0x1);
+                } 
+                else 
+                {
+                    Serial.println("Normal network behavior.");
+                    Config->setLedColor(0x0, 0x1, 0x0);
+                }
+                deauthCount = 0;
+                lastCheckTime = millis();
+            }
+        }
+    }
 
     void executeCommand(BaseBoardConfig* Config, const String &commandLine) {
         int openParenIndex = commandLine.indexOf('(');
@@ -601,6 +670,15 @@ namespace Scripting
         Functions::InitBLEBuds(Config, "BLE_SamsungBuds");
 #endif
     }
+
+    void handleDeauthDetector(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        String channelarg = params[0];
+
+        Functions::InitDeauthDetector(Config, channelarg);
+    }
+
+
     void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params)
     {
         String ControllerType = params[0];
