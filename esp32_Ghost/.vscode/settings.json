@@ -49,6 +49,7 @@
         "compare": "cpp",
         "concepts": "cpp",
         "ctime": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "map": "cpp"
     }
 }

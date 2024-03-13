@@ -4,7 +4,6 @@
 #include <WiFi.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
-#include "esp_system.h"
 #include "Public/Configs/S2Config.h"
 //#include "Public/Configs/S3Config.h"
 //#include "Public/Configs/S3MiniConfig.h"
