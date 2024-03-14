@@ -12,6 +12,7 @@
 
 // Have to Include .cpp Files due to Arduino Not Liking Organization
 
+#include "Private/Services/APScannerService.cpp"
 #include "Private/Controllers/YoutubeController.cpp"
 #include "Private/Services/YoutubeService.cpp"
 #include "Private/Controllers/RokuController.cpp"

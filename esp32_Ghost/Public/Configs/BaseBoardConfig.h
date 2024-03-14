@@ -9,6 +9,7 @@
 #include "esp_wifi_types.h"
 #include <esp_mac.h>
 #include <wifi.h>
+#include "../../Public/Services/APScannerService.h"
 #include "../../Public/Controllers/YoutubeController.h"
 #include "../../Public/Controllers/NetflixController.h"
 #include "../../Public/Controllers/RokuController.h"
@@ -18,16 +19,6 @@
 const int MAX_CHANNELS = 12;
 
 const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
-
-typedef struct {
-  unsigned frame_ctrl:16;
-  unsigned duration_id:16;
-  uint8_t addr1[6];
-  uint8_t addr2[6];
-  uint8_t addr3[6];
-  unsigned sequence_ctrl:16;
-  uint8_t addr4[6];
-} wifi_ieee80211_mac_hdr_t;
 
 struct Wifianalyticsdata {
     unsigned long deauthCount[MAX_CHANNELS];
@@ -40,11 +31,6 @@ struct Wifianalyticsdata {
     unsigned long endTime[MAX_CHANNELS];         
     String deviceMac;
 };
-
-typedef struct {
-  wifi_ieee80211_mac_hdr_t hdr;
-  uint8_t payload[0];
-} wifi_ieee80211_packet_t;
 
 #ifdef USE_BLUETOOTH
 #include <NimBLEDevice.h>
@@ -170,6 +156,8 @@ namespace Functions
 
     void InitDeauthDetector(BaseBoardConfig* Config, String Channel, String SSID, String Password, String WebHookUrl);
 
+    void MeasureDistance(BaseBoardConfig* Config, String SSID, String RSS1Val);
+
 }
 
 typedef void (*CommandHandler)(BaseBoardConfig* Config, std::vector<String> params);
@@ -190,6 +178,7 @@ namespace Scripting
     void handleGalaxyBudSpam(BaseBoardConfig* Config, std::vector<String> params);
     void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params);
     void handleDeauthDetector(BaseBoardConfig* Config, std::vector<String> params);
+    void handleMeasureDistance(BaseBoardConfig* Config, std::vector<String> params);
 
     Command commands[] = {
     {"LED_ON", handleLedOn},
@@ -200,7 +189,8 @@ namespace Scripting
     {"UPDATE", handleUpdate},
     {"GALAXY_BUD_SPAM", handleGalaxyBudSpam},
     {"DIAL_CONNECT", handleDialConnect},
-    {"DETECT_DEAUTH", handleDeauthDetector}
+    {"DETECT_DEAUTH", handleDeauthDetector},
+    {"DETECT_WIFI_DISTANCE", handleMeasureDistance}
     };
 }
 
@@ -517,6 +507,13 @@ namespace Functions
     Wifianalyticsdata* analyticsdata;
     bool ConfigHasChannel = false;
     int channel = 1;
+    WiFiInfo TargetInfo;
+    uint8_t BSSIDTarget[6];
+    int strongestRSSI = INT_MIN;
+    double strongestDistance = 0;
+    bool targetFound = false;
+    const double n = 2.5;
+    double RSSI_0 = -40;
 
     void promiscuous_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
         if (type != WIFI_PKT_MGMT) return;
@@ -660,6 +657,94 @@ namespace Functions
         }
     }
 
+    void DistanceCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+        wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
+        wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
+        wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+        int rssi = ppkt->rx_ctrl.rssi;
+
+        if (memcmp(hdr->addr2, BSSIDTarget, 6) == 0) {
+           strongestRSSI = rssi;
+           strongestDistance = pow(10.0, (RSSI_0 - rssi) / (10 * n));
+        } else {
+            if (rssi > strongestRSSI) {
+                strongestRSSI = rssi;
+                strongestDistance = pow(10.0, (RSSI_0 - rssi) / (10 * n));
+            }
+        }
+    }
+
+    void reportAndReset(BaseBoardConfig* Config) {
+        if (strongestRSSI != INT_MIN) {
+            Serial.print("Strongest non-target RSSI: ");
+            Serial.print(strongestRSSI);
+            Serial.print(" dBm, Estimated Distance: ");
+            Serial.print(strongestDistance);
+            Serial.println(" meters");
+        }
+
+        if (strongestDistance < 2) {
+            Config->setLedColor(false, true, false);
+        } else if (strongestDistance >= 2 && strongestDistance <= 5) {
+            Config->setLedColor(true, true, false);
+        } else {
+            Config->setLedColor(true, false, false);
+        }
+        
+        targetFound = false;
+        strongestRSSI = INT_MIN;
+        strongestDistance = 0;
+    }
+
+    void MeasureDistance(BaseBoardConfig* Config, String SSID, String RSS1Val)
+    {
+
+        Serial.println("About to Measure Distance");
+
+        if (!RSS1Val.startsWith("0"))
+        {
+            RSSI_0 = RSS1Val.toInt();
+        }
+
+        if (!SSID.startsWith("0"))
+        {
+            scanner.scanNetworks();
+
+            TargetInfo = scanner.FindNetworkFromSSID(SSID);
+
+            convertStringToBssid(TargetInfo.bssid.c_str(), BSSIDTarget);
+            esp_wifi_set_channel(TargetInfo.channel, WIFI_SECOND_CHAN_NONE);
+        }
+
+        WiFi.mode(WIFI_STA);
+        WiFi.disconnect();
+        delay(100);
+
+        esp_wifi_set_promiscuous(true);
+        esp_wifi_set_promiscuous_filter(&filt);
+        esp_wifi_set_promiscuous_rx_cb(DistanceCallback);
+        
+
+
+        while (true)
+        {
+            if (startTime == 0 || millis() - startTime >= 5000) {
+                if (startTime != 0) {
+                    reportAndReset(Config);
+                }
+                startTime = millis();
+
+                if (SSID.startsWith("0"))
+                {
+                    channel = (channel % MAX_CHANNELS) + 1;
+                    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+                    Serial.printf("Set Channel to %i", channel);
+                }
+            }
+        }
+        
+    }
+
     void InitDeauthDetector(BaseBoardConfig* Config, String Channel, String SSID, String Password, String WebHookUrl) 
     {
         startTime = millis();
@@ -714,7 +799,7 @@ namespace Functions
             analyticsdata->startTime[channelIndex] = startTime;
         }
 
-       
+
         
         esp_wifi_set_promiscuous(false);
         sendWifiAnalitics(Config, Channel, SSID, Password, WebHookUrl);
@@ -815,14 +900,17 @@ namespace Scripting
 {
     void handleLedOn(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
         Config->blinkLed();
     }
     void handleLedOff(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
         Config->TurnoffLed();
     }
     void handleSetColor(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
         int red = params[0].toInt();
         int green = params[1].toInt();
         int blue = params[2].toInt();
@@ -831,17 +919,19 @@ namespace Scripting
     }
     void handlePrint(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
         Serial.println(params[0]);
     }
     void handleSleep(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
         int DelayValue = params[0].toInt() / 1000;
         
         sleep(DelayValue);
     }
     void handleUpdate(BaseBoardConfig* Config, std::vector<String> params)
     {
-
+        if (params.size() <= 0) return;
         String SSID = params[0];
         String Password = params[1];
 
@@ -856,6 +946,8 @@ namespace Scripting
 
     void handleDeauthDetector(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
+
         String channelarg = params[0];
         String SSIDarg = params[1];
         String Passwordarg = params[2];
@@ -864,9 +956,21 @@ namespace Scripting
         Functions::InitDeauthDetector(Config, channelarg, SSIDarg, Passwordarg, WebHookUrl);
     }
 
+    void handleMeasureDistance(BaseBoardConfig* Config, std::vector<String> params)
+    {
+        String SSIDarg = params[0];
+        String RSSIarg = params[1];
+
+        SSIDarg.trim();
+        RSSIarg.trim();
+
+        Functions::MeasureDistance(Config, SSIDarg, RSSIarg);
+    }
 
     void handleDialConnect(BaseBoardConfig* Config, std::vector<String> params)
     {
+        if (params.size() <= 0) return;
+
         String ControllerType = params[0];
         String SSID = params[1];
         String Password = params[2];
